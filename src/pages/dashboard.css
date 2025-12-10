@@ -1,0 +1,301 @@
+@import url(https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap);
+
+body {
+    margin: 0;
+    font-family: 'Kanit', sans-serif;
+    background: #ffffff; 
+}
+
+/* Layout */
+.container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 230px;
+    background: #0a6cff;
+    padding: 70px 20px;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    min-height: 100vh;
+}
+
+.sidebar .logo {
+    text-align: center;
+    font-size: 40px;
+    margin-bottom: 40px;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    cursor: pointer;
+    color: #ffffff;
+    font-weight: 500;
+    transition: 0.2s;
+}
+
+.sidebar ul li:hover,
+.sidebar ul li.active {
+    background: #ffffff;
+    color: #0a6cff;
+}
+
+.sidebar ul .logout {
+    margin-top: 50px;
+    color: #f8fafb;
+}
+
+/* Main Content */
+.main {
+    flex: 1;
+    padding: 30px;
+}
+
+/* Top Bar */
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.search-box {
+    width: 300px;
+    padding: 12px 15px;
+    border-radius: 15px;
+    border: none;
+    outline: none;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* Profile */
+.profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;   /* 👈 บังคับให้ชิดขวาสุด */
+}
+
+
+.profile img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+}
+
+/* Welcome Banner */
+.welcome-banner {
+    margin-top: 30px;
+    background: linear-gradient(135deg, #0a6cff, #ae78f9);
+    padding: 20px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #ffffff;
+}
+
+.banner-img {
+    width: 250px;
+    border-radius: 50%;
+}
+
+/* Cards */
+.cards {
+    display: flex;
+    flex-direction: column;   /* 👈 เพิ่มบรรทัดนี้ */
+    margin-top: 30px;
+    gap: 25px;
+}
+
+.card {
+    flex: 1;
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+    transition: 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card h3 {
+    margin-top: 0;
+    color: #0077c2;
+}
+
+.logo {
+    width: 150px;
+    height: 150px;
+    display: block;
+    margin: 0 auto 40px;
+}
+
+.logout {
+    background-color: #e53935;
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: auto;     /* ดันลงล่างสุด! */
+    text-align: center;
+    cursor: pointer;
+}
+.logout:hover {
+    background-color: #c62828;
+}
+
+.welcome-title {
+    font-size: 45px;
+    color: #1A73E8;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.welcome-desc {
+    font-size: 16px;
+    color: #ffffff;
+    line-height: 1.7;
+    max-width: 800px;
+}
+
+/* ปุ่มที่เป็น Trigger */
+.guide-trigger {
+    cursor: pointer;
+    background: linear-gradient(135deg, #0a6cff, #6f9dff);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 8px 20px rgba(0, 123, 255, 0.25);
+    transition: 0.25s ease;
+    font-size: 22px;
+    font-weight: 700;
+    color: #ffffff;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ⭐ แสงเงาวับที่วิ่งผ่านปุ่ม */
+.guide-trigger::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 80%;
+    height: 100%;
+    background: linear-gradient(
+        120deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.4) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    filter: blur(10px);          /* ⭐ ทำให้แสงฟุ้งเนียน */
+    opacity: 0.7;
+    transform: skewX(-20deg);     /* ⭐ ทำให้เอียงแบบธรรมชาติ */
+    animation: shinySmooth 3.5s infinite ease-in-out;
+}
+
+
+@keyframes shinySmooth {
+    0% {
+        left: -150%;
+    }
+    50% {
+        left: 150%;
+    }
+    100% {
+        left: 150%;
+    }
+}
+
+/* ไอคอน Glow */
+.guide-trigger::before {
+    content: "✨";
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    font-size: 32px;
+    opacity: 0.4;
+}
+
+/* Hover สวยๆ */
+.guide-trigger:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 25px rgba(0, 123, 255, 0.35);
+}
+
+/* คำอธิบายเพิ่มเติมด้านล่าง */
+.guide-trigger p {
+    color: #000;
+    font-size: 15px;
+    margin-top: 12px;
+    line-height: 1.6;
+    background: rgba(255,255,255,0.7);
+    padding: 10px 15px;
+    border-radius: 12px;
+}
+
+/* พื้นหลัง Popup */
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    visibility: hidden;
+    opacity: 0;
+    transition: 0.3s ease;
+    z-index: 1000;
+}
+
+/* กล่อง popup */
+.popup-box {
+    background: white;
+    width: 400px;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    text-align: center;
+    animation: popIn 0.3s ease;
+}
+
+/* ปุ่มปิด */
+.close-popup {
+    background: #0a6cff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    margin-top: 20px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.close-popup:hover {
+    background: #084ec1;
+}
+
+/* ทำให้ popup โผล่มา */
+.popup-overlay.active {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Animation */
+@keyframes popIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}

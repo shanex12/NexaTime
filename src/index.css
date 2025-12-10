@@ -1,0 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{ --bg:#f0f9ff; --card:#fefefe; --text:#05264c; --accent:#0ea5e9; }
+.dark{ --bg:#022036; --card:#072033; --text:#e6f6ff; --accent:#0284c7; }
+body{ font-family: 'Kanit', sans-serif; background:var(--bg); color:var(--text); }
+.card{ background:var(--card); padding:1rem; border-radius:8px; box-shadow: 0 2px 6px rgba(2,6,23,0.06); }
+.student-dashboard{
+  background: #ffffff; height: 100%;
+}    

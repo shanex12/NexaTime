@@ -13,7 +13,7 @@ export default function Subjects() {
     id: "",
     subject_id: "",
     name: "",
-    periods: 1,
+    periods: 0,
     theory: 0,
     practice: 0,
     credit: 0,
@@ -60,10 +60,10 @@ export default function Subjects() {
     const dup = subjects.find(
       (s) => s.name.trim() === form.name.trim() && s.id !== form.id
     );
-    if (dup) return alert("ชื่อวิชานี้มีอยู่แล้ว!");
+    // if (dup) return alert("ชื่อวิชานี้มีอยู่แล้ว!");
 
-    if (!form.isGeneral && form.departments.length === 0)
-      return alert("กรุณาเลือกแผนกที่เปิดสอน");
+    // if (!form.isGeneral && form.departments.length === 0)
+    //   return alert("กรุณาเลือกแผนกที่เปิดสอน");
 
     const id = form.id || form.subject_id || uid("s");
 
@@ -91,7 +91,8 @@ export default function Subjects() {
       room_tag: s.room_tag || "",
       theory: s.theory || 0,
       practice: s.practice || 0,
-      credit: s.credit || 0
+      credit: s.credit || 0,
+      periods_per_session: s.periods_per_session || 1
     });
     setEditing(true);
   }
@@ -127,9 +128,46 @@ export default function Subjects() {
     });
   }
 
+  /**
+ * ลบรายวิชาทั้งหมดออกจากระบบ
+ */
+function clearAllSubjects() {
+  const ok = window.confirm(
+    "⚠️ ต้องการลบรายวิชาทั้งหมดหรือไม่?\n" +
+    "รายวิชาจะถูกลบทั้งหมด และไม่สามารถกู้คืนได้"
+  );
+  if (!ok) return;
+
+  const d = loadData();
+
+  // ลบ subjects
+  d.subjects = [];
+
+  // // ล้างตารางเรียนด้วย (ป้องกัน dangling subject)
+  // d.allTimetables = {};
+  // d.lastResult = null;
+
+  // // คงข้อมูลพื้นฐานอื่นไว้
+  // d.classGroups = classGroups;
+  // d.departments = departments;
+  // d.rooms = rooms;
+  // d.teachers = teachers;
+  // d.settings = settings;
+
+  saveData(d);
+
+  // อัปเดต UI
+  setSubjects([]);        // ถ้า subjects เป็น state
+  setForm(emptyForm);
+  setEditing(false);
+
+  console.warn("All subjects have been cleared");
+}
+
+
   // ✅ นำเข้า subject.csv ตาม pdf:
   // subject_id, subject_name, theory, practice, credit
-  function handleImportCSV(e) {
+function handleImportCSV(e) {
   const input = e.target;
   const file = input.files[0];
   if (!file) return;
@@ -143,62 +181,86 @@ export default function Subjects() {
       console.log("Import subject.csv rows:", rows);
 
       // subject_id ที่มีอยู่แล้วในระบบ
-      const existingIds = new Set(
-        subjects
-          .map(s => (s.subject_id || "").trim())
-          .filter(Boolean)
-      );
+      // const existingIds = new Set(
+      //   subjects
+      //     .map(s => (s.subject_id || "").trim())
+      //     .filter(Boolean)
+      // );
 
-      // subject_id ที่ import รอบนี้ (กันซ้ำในไฟล์)
+      // ใช้ Map เพื่อให้ subject_id ซ้ำแล้วแทนที่อัตโนมัติ
+      const subjectMap = new Map();
+      
+      // เก็บ subject_id ที่นำเข้าแล้วในไฟล์
       const importedIds = new Set();
 
-      const imported = rows
-        .map((r, index) => {
-          const rawId = (r.subject_id || "").trim();
-          const name = (r.subject_name || "").trim();
+      // ใส่ subjects เดิมเข้า Map ก่อน (ให้ของใหม่ overwrite)
+      subjects.forEach(s => {
+        if (s.subject_id) {
+          subjectMap.set(s.subject_id, s);
+        }
+      });
 
-          if (!name) return null; // ไม่มีชื่อวิชา ข้าม
+      rows.forEach((r, index) => {
+        const rawId = (r.subject_id || "").trim();
+        const name = (r.subject_name || "").trim();
 
-          // ❌ subject_id ซ้ำกับของเดิม
-          if (rawId && existingIds.has(rawId)) {
-            console.warn(`Row ${index + 2}: subject_id ซ้ำกับระบบ →`, rawId);
-            return null;
-          }
+        if (!name) {
+          console.warn(`Row ${index + 2}: ไม่มี subject_name → ข้าม`);
+          return;
+        }
 
-          // ❌ subject_id ซ้ำกันเองในไฟล์
-          if (rawId && importedIds.has(rawId)) {
-            console.warn(`Row ${index + 2}: subject_id ซ้ำในไฟล์ →`, rawId);
-            return null;
-          }
+        // ❌ subject_id ซ้ำกันเองในไฟล์ 
+        if (rawId && importedIds.has(rawId)) { 
+          console.warn(`Row ${index + 2}: ไม่มี subject_name → ซ้ำในไฟล์, `, rawId);
+          return; 
+        }
 
-          const subject_id = rawId || uid("s");
-          importedIds.add(subject_id);
+        // ❌ subject_id ซ้ำกับของเดิมในระบบ
+        if (rawId && subjectMap.has(rawId)) {
+          console.warn(
+            `Row ${index + 2}: subject_id ซ้ำ → ใช้ข้อมูลใหม่แทนของเดิม`,
+            rawId
+          );
+        }
 
-          const theory = Number(r.theory) || 0;
-          const practice = Number(r.practice) || 0;
-          const credit = Number(r.credit) || 0;
-          const periods = theory + practice || 1;
+        const subject_id = rawId || uid("s");
+        importedIds.add(subject_id);
 
-          return {
-            id: subject_id,
-            subject_id,
-            name,
-            theory,
-            practice,
-            credit,
-            periods,
-            room_type: theory > 0 ? "theory" : "practice",
-            room_tag: "",
-            color: "#0ea5e9",
-            teachers: [],
-            periods_per_session: 1,
-            departments: [],
-            isGeneral: false
-          };
-        })
-        .filter(Boolean);
+        const theory = Number(r.theory) || 0;
+        const practice = Number(r.practice) || 0;
+        const credit = Number(r.credit) || 0;
+        const periods = theory + practice || 1;
+        console.log("periods:", periods);
+        console.log("periods_per_session raw:", r.periods_per_session);
+        // let per_1 = Number(r.periods_per_session);
+        // let per_2 = Number(r.periods_per_session ?? periods)
+        // let per_3 = Number(r.periods_per_session || periods) || 1;
+        // console.log("periods_per_session parsed:", per_1, per_2, per_3);
 
-      const merged = [...subjects, ...imported];
+        const periods_per_session =
+          Number(r.periods_per_session || periods);  //เรียกจาก csv 
+        console.log("periods_per_session:", periods_per_session);
+
+        const subj = {
+          id: subject_id,
+          subject_id,
+          name,
+          theory,
+          practice,
+          credit,
+          periods,
+          periods_per_session,
+          color: "#0ea5e9",
+          teachers: [],
+          departments: []
+        };
+
+        // ✅ set ซ้ำ = overwrite
+        subjectMap.set(subject_id, subj);
+      });
+
+      // แปลงกลับเป็น array
+      const merged = Array.from(subjectMap.values());
 
       setSubjects(merged);
       persist(merged);
@@ -231,17 +293,29 @@ export default function Subjects() {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
 
+          <label className="text-sm">คาบทฤษฎี</label>
           <input
             type="number"
             className="w-full p-2 border mb-2"
-            placeholder="จำนวนคาบต่อสัปดาห์"
-            value={form.periods}
+            placeholder="จำนวนคาบทฤษฎีต่อสัปดาห์"
+            value={form.theory}
             onChange={(e) =>
-              setForm({ ...form, periods: Number(e.target.value) })
+              setForm({ ...form, theory: Number(e.target.value) })
             }
           />
 
-          {/* ประเภทห้องเรียน */}
+          <label className="text-sm">คาบปฏิบัติ</label>
+          <input
+            type="number"
+            className="w-full p-2 border mb-2"
+            placeholder="จำนวนคาบปฏิบัติต่อสัปดาห์"
+            value={form.practice}
+            onChange={(e) =>
+              setForm({ ...form, practice: Number(e.target.value) })
+            }
+          />
+
+          {/* ประเภทห้องเรียน
           <select
             className="w-full p-2 border mb-2"
             value={form.room_type}
@@ -251,9 +325,9 @@ export default function Subjects() {
           >
             <option value="theory">ห้องเรียนปกติ</option>
             <option value="lab">ห้องปฏิบัติการ</option>
-          </select>
+          </select> */}
 
-          {/* Room Tag */}
+          {/* Room Tag
           <input
             className="w-full p-2 border mb-2"
             placeholder="Room Tag (เช่น computer, network, science)"
@@ -261,7 +335,7 @@ export default function Subjects() {
             onChange={(e) =>
               setForm({ ...form, room_tag: e.target.value })
             }
-          />
+          /> */}
 
           <label className="text-sm">คาบต่อครั้ง</label>
           <input
@@ -273,6 +347,20 @@ export default function Subjects() {
               setForm({
                 ...form,
                 periods_per_session: Number(e.target.value)
+              })
+            }
+          />
+
+          <label className="text-sm">หน่วยกิต</label>
+          <input
+            type="number"
+            min="1"
+            className="w-full p-2 border mb-2"
+            value={form.credit}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                credit: Number(e.target.value)
               })
             }
           />
@@ -307,7 +395,7 @@ export default function Subjects() {
             </div>
           </div>
 
-          {/* แผนก */}
+          {/* แผนก
           <div className="mb-2">
             <div className="text-sm mb-1">แผนกที่เปิดสอน</div>
 
@@ -341,7 +429,7 @@ export default function Subjects() {
                 )}
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* ปุ่ม */}
           <div className="flex gap-2 mb-3">
@@ -418,7 +506,15 @@ export default function Subjects() {
               </div>
             )}
           </div>
+          <br/>
+          <button
+  className="btn bg-red-700 w-full"
+  onClick={clearAllSubjects}
+>
+  🗑️ ลบรายวิชาทั้งหมด
+</button>
         </div>
+        
       </div>
     </div>
   );

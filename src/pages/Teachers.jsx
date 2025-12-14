@@ -233,6 +233,7 @@ function handleImportTeachCSV(e) {
               t.id === teacherCode
           ) || null;
         if (!teacher) return;
+        console.log("Found teacher:", teacher);
 
         // หา subject จาก subject_id หรือ id
         const subjIndex = updatedSubjects.findIndex(
@@ -241,6 +242,8 @@ function handleImportTeachCSV(e) {
             s.id === subjectCode
         );
         if (subjIndex === -1) return;
+        console.log("Found subjIndex:", subjIndex);
+
 
         const subj = updatedSubjects[subjIndex];
         const teacherList = Array.isArray(subj.teachers)
@@ -263,6 +266,8 @@ function handleImportTeachCSV(e) {
       d.subjects = updatedSubjects;
       d.teachers = currentTeachers; // เผื่อ safeTeacher ปรับโครง
       saveData(d);
+
+      console.log("Updated data:", d);
 
       alert("นำเข้า teach.csv (teacher_id,subject_id) เรียบร้อย");
       input.value = "";               // ✅ reset input ได้จริง
@@ -323,7 +328,7 @@ function handleImportTeachCSV(e) {
             }
           />
 
-          {/* ชื่อย่อครู (ยังให้แก้เองได้) */}
+          {/* ชื่อย่อครู (ยังให้แก้เองได้)
           <input
             className="w-full p-2 border mb-2"
             placeholder="ชื่อย่อ (เช่น ครูเอ)"
@@ -334,7 +339,7 @@ function handleImportTeachCSV(e) {
                 short: e.target.value
               })
             }
-          />
+          /> */}
 
           {/* จำนวนคาบสูงสุดต่อวัน */}
           <div className="mb-3">

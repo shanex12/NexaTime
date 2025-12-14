@@ -41,7 +41,7 @@ export default function ClassGroups() {
 
   function handleSave() {
     if (!form.name) return alert("กรุณากรอกชื่อกลุ่มเรียน");
-    if (!form.department_id) return alert("กรุณาเลือกแผนก");
+    // if (!form.department_id) return alert("กรุณาเลือกแผนก");
 
     const id = form.id || form.group_id || uid("cg");
     const item = {
@@ -161,7 +161,7 @@ export default function ClassGroups() {
             </div>
           </div>
 
-          {/* แผนก */}
+          {/* แผนก
           <div className="mb-3">
             <label className="block mb-1 font-medium">แผนกที่สังกัด</label>
             <select
@@ -185,7 +185,7 @@ export default function ClassGroups() {
               ใช้สำหรับเชื่อมกลุ่มเรียนกับรายวิชาในแผนกนั้น
               และใช้ฟิลเตอร์ตอนสร้างตารางเรียน
             </div>
-          </div>
+          </div> */}
 
           {/* จำนวนผู้เรียน */}
           <div className="mb-3">

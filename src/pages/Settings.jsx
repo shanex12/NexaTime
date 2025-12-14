@@ -8,7 +8,8 @@ export default function Settings() {
     timeslots_per_day: 8,
 
     // ✅ ตัวเลือกพฤติกรรม AI
-    avoidLunch: true,       // เลี่ยงคาบพักกลางวัน
+    strictAvoidLunch : false, // บังคับเลี่ยงคาบพักกลางวัน ห้ามโดยเด็ดขาด 
+    avoidLunch: true,       // พยายามเลี่ยงคาบพักกลางวัน
     lunchSlot: 4,           // index (0-based) → 4 = คาบที่ 5
     spreadDays: true,       // กระจายวิชาข้ามวัน
     strictRoomTag: true,    // เข้มงวด room_tag
@@ -31,6 +32,7 @@ export default function Settings() {
     d.settings = settings;
     saveData(d);
     alert("บันทึกการตั้งค่า AI เรียบร้อยแล้ว");
+    console.log("Saved settings: ", settings);
   }
 
   const lunchSlotDisplay = (settings.lunchSlot ?? 4) + 1;
@@ -124,13 +126,28 @@ export default function Settings() {
               <input
                 type="checkbox"
                 className="mt-1"
+                checked={settings.strictAvoidLunch}
+                onChange={e => handleChange("strictAvoidLunch", e.target.checked)}
+              />
+              <div>
+                <div className="font-medium">บังคับเลี่ยงคาบพักกลางวันโดยเด็ดขาด</div>
+                <div className="text-xs text-gray-500">
+                  AI จะไม่เลือกคาบที่ {lunchSlotDisplay} เป็นคาบเรียนโดยเด็ดขาด เช่น โรงเรียนมีนโยบายห้ามสอนในคาบพักกลางวัน
+                </div>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                className="mt-1"
                 checked={settings.avoidLunch}
                 onChange={e => handleChange("avoidLunch", e.target.checked)}
               />
               <div>
                 <div className="font-medium">เลี่ยงคาบพักกลางวัน</div>
                 <div className="text-xs text-gray-500">
-                  AI จะไม่เลือกคาบที่ {lunchSlotDisplay} เป็นตัวเลือกแรก ๆ
+                  AI จะพยายามไม่เลือกคาบที่ {lunchSlotDisplay} เป็นตัวเลือกแรก ๆ
                   เว้นแต่หาคาบอื่นไม่ได้จริง ๆ
                 </div>
               </div>

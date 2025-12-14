@@ -132,7 +132,7 @@ export default function Rooms() {
 
           {/* ชื่อห้อง / รหัสห้อง */}
           <div className="mb-3">
-            <label className="block mb-1 font-medium">ชื่อห้อง / รหัสห้อง</label>
+            <label className="block mb-1 font-medium">ชื่อห้องเรียน</label>
             <input
               className="w-full p-2 border rounded"
               placeholder="เช่น 421, ห้องคอม 1, ห้องวิทย์ 2"
@@ -146,7 +146,7 @@ export default function Rooms() {
             />
           </div>
 
-          {/* ความจุ */}
+          {/* ความจุ
           <div className="mb-3">
             <label className="block mb-1 font-medium">
               ความจุห้อง (จำนวนคน)
@@ -163,9 +163,9 @@ export default function Rooms() {
                 })
               }
             />
-          </div>
+          </div> */}
 
-          {/* ประเภทห้อง */}
+          {/* ประเภทห้อง
           <div className="mb-3">
             <label className="block mb-1 font-medium">ประเภทห้องเรียน</label>
             <select
@@ -184,9 +184,9 @@ export default function Rooms() {
               <option value="science">ห้องวิทยาศาสตร์</option>
               <option value="language">ห้องภาษา</option>
             </select>
-          </div>
+          </div> */}
 
-          {/* Room tag */}
+          {/* Room tag
           <div className="mb-3">
             <label className="block mb-1 font-medium">
               Room Tag (เช่น computer, network, science)
@@ -201,7 +201,7 @@ export default function Rooms() {
                 })
               }
             />
-          </div>
+          </div> */}
 
           <div className="flex gap-2 mt-2">
             <button className="btn bg-blue-600" onClick={handleSave}>

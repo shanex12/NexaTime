@@ -60,6 +60,7 @@ export default function Generate() {
   const days = settings.days || 5;
   const slots = settings.timeslots_per_day || 8;
 
+  const strictAvoidLunch = settings.strictAvoidLunch ?? false;
   const avoidLunch = settings.avoidLunch ?? true;
   const lunchSlot = settings.lunchSlot ?? 4; // 0-based
   const spreadDays = settings.spreadDays ?? true;
@@ -68,6 +69,7 @@ export default function Generate() {
   console.log("DEBUG: settings", {
     days,
     slots,
+    strictAvoidLunch,
     avoidLunch,
     lunchSlot,
     spreadDays,
@@ -227,6 +229,16 @@ export default function Generate() {
     console.log("DEBUG: pickDay", { groupName, loads, chosen });
     return chosen;
   }
+  
+  //คำนวณจำนวนคาบที่ใช้ไปแล้วของกลุ่มในวันนั้น
+  function getUsedSlotsForDay(groupName, day, assignments, globalAssignments) {
+    const all = [...(globalAssignments || []), ...(assignments || [])];
+
+    return all
+      .filter(a => a.class_group === groupName && a.day === day)
+      .reduce((sum, a) => sum + (a.duration || 1), 0);
+  }
+
 
   /* ======================================================
    *  ROOM MATCHING
@@ -292,18 +304,67 @@ export default function Generate() {
 
         for (let attempt = 0; attempt < 500 && !placed; attempt++) {
           const day = pickDayForGroup(ctx.groupName, assignments, globalAssignments);
+
+          // 🔹 ตรวจจำนวนคาบรวมของวันนั้น
+          const usedSlots = getUsedSlotsForDay(
+            ctx.groupName,
+            day,
+            assignments,
+            globalAssignments
+          );
+
+          // ❌ ถ้าลงเพิ่มแล้วเกิน slots → ข้าม attempt นี้
+          if (usedSlots + duration > slots) {
+            console.log(
+              "DEBUG: exceed daily slots",
+              ctx.groupName,
+              day,
+              usedSlots,
+              "+",
+              duration,
+              ">",
+              slots
+            );
+            continue;
+          }
+
+
           const startSlot = Math.floor(Math.random() * (slots - duration + 1));
 
+          // ตรวจสอบว่าคาบในรายวิชานี้ชนกับคาบพักกลางวันหรือไม่
           const hitsLunch =
             startSlot <= lunchSlot &&
             startSlot + duration > lunchSlot;
 
-          if (!allowLunch && hitsLunch) continue;
+          // บังคับห้ามชนคาบพักกลางวันโดยเด็ดขาด
+          if (strictAvoidLunch && hitsLunch) {
+            console.log("DEBUG: blocked by strictAvoidLunch", {
+              subj: subj.name,
+              day,
+              startSlot,
+              duration
+            });
+            continue;
+          }
+
+          // พยายามเลี่ยงคาบพักกลางวัน
+          if (!allowLunch && avoidLunch && hitsLunch) {
+            console.log("DEBUG: blocked by avoidLunch", {
+              subj: subj.name,
+              day,
+              startSlot,
+              duration
+            });
+            continue;
+          }
+
+          const selectedTeachers = subj.teachers?.length
+              ? teachers.filter(t => subj.teachers.includes(t.id))
+              : teachers;
+          console.log("DEBUG: selectedTeachers", selectedTeachers);
 
           const teacher = chooseTeacher(
-            subj.teachers?.length
-              ? teachers.filter(t => subj.teachers.includes(t.id))
-              : teachers,
+            selectedTeachers,
             assignments,
             globalAssignments
           );
@@ -335,8 +396,15 @@ export default function Generate() {
       }
 
       if (!placed) {
-        setLog(p => p + `\n❌ วาง ${subj.name} ไม่สำเร็จ`);
+        const msg =
+          `❌ กลุ่ม ${ctx.groupName}: ไม่สามารถลงวิชา "${subj.name}" ได้ ` +
+          `(คาบเรียนต่อวันเกินค่าที่ตั้งไว้ ${slots} คาบ)`;
+
+        console.warn(msg);
+        setLog(prev => prev + "\n" + msg);
+
       }
+
     }
 
     return assignments;

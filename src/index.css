@@ -9,4 +9,5 @@ body{ font-family: 'Kanit', sans-serif; background:var(--bg); color:var(--text);
 .card{ background:var(--card); padding:1rem; border-radius:8px; box-shadow: 0 2px 6px rgba(2,6,23,0.06); }
 .student-dashboard{
   background: #ffffff; height: 100%;
+  display: flex; flex-direction: row;
 }    

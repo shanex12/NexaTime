@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar.jsx";
 
 import LoginPage from "./LoginPage.jsx";
+import StudentDashboard from "./StudentDashboard.jsx";
 import StudentClassSelect from "./StudentClassSelect.jsx";
 import StudentTimetablePage from "./StudentTimetable.jsx";
 import StudentRoomUsage from "./StudentRoomUsage.jsx";
@@ -64,12 +65,12 @@ export default function App() {
     setRole(userRole);
 
     if (userRole === "admin") navigate("dashboard");
-    else if (userRole === "student") navigate("studentSelectMenu");
+      else if (userRole === "student") navigate("studentDashboard");
   }
 
   // ✔ นักเรียนเลือกเมนูหลัก
-  function handleStudentClass() {
-    navigate("studentClassSelect");
+  function studentDashboard() {
+    navigate("studentDashboard");
   }
 
   function handleStudentRoom() {
@@ -103,12 +104,14 @@ export default function App() {
       case "login":
         return <LoginPage onLogin={handleLogin} />;
 
-      case "studentSelectMenu":
+      case "studentDashboard":  
         return (
-          <StudentClassSelect
-            onClass={handleStudentClass}
-            onRoom={handleStudentRoom}
-          />
+          <StudentDashboard
+            onClass={() => navigate("studentClassSelect")}
+            onRoom={() => navigate("studentRoomUsage")}
+            onLogout={handleLogout}
+            onBack={goBack}
+    />
         );
 
       case "studentClassSelect":
@@ -175,25 +178,25 @@ export default function App() {
   };
 
   return (
-    <div className="flex w-full h-full">
-      {/* Sidebar เฉพาะ admin */}
-      {role === "admin" && page !== "login" && (
-        <Sidebar onNavigate={navigate} active={page} onLogout={handleLogout} />
-      )}
+<div className="flex w-full h-screen overflow-hidden">
+  {role === "admin" && page !== "login" && (
+    <Sidebar onNavigate={navigate} active={page} onLogout={handleLogout} />
+  )}
 
-      <div className="flex-1 p-6">
-        {/* ปุ่มย้อนกลับ (ยกเว้น login) */}
-        {page !== "login" && (
-          <button
-            onClick={goBack}
-            className="mb-4 px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded"
-          >
-            ← ย้อนกลับ
-          </button>
-        )}
+  <main className="flex-1 overflow-auto bg-gray-100 p-6">
+    
+    {/* ✅ ปุ่มย้อนกลับ */}
+    {page !== "login" && (
+      <button
+        onClick={goBack}
+        className="mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded inline-flex items-center gap-2"
+      >
+        ← ย้อนกลับ
+      </button>
+    )}
 
-        {renderPage()}
-      </div>
-    </div>
+    {renderPage()}
+  </main>
+</div>
   );
 }

@@ -98,6 +98,58 @@ export default function Timetable(){
     pdf.save('timetable.pdf');
   }
 
+function exportCSV() {
+  const data = loadData();
+  const all = data.allTimetables || {};
+
+  const rows = [];
+
+  Object.entries(all).forEach(([groupId, sessions]) => {
+    sessions.forEach(s => {
+      rows.push({
+        group_id: groupId,
+        day: s.day,
+        period: s.slot + 1,
+        subject_id: s.course_id,
+        teacher_id: s.teacher_id,
+        room_id: s.room_id
+      });
+    });
+  });
+
+  if (!rows.length) {
+    alert("ไม่มีข้อมูลตารางเรียน");
+    return;
+  }
+
+  const header = "group_id,day,period,subject_id,teacher_id,room_id\n";
+  const body = rows
+    .map(r =>
+      [
+        r.group_id,
+        r.day,
+        r.period,
+        r.subject_id,
+        r.teacher_id,
+        r.room_id
+      ].join(",")
+    )
+    .join("\n");
+
+  const csv = header + body;
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "timetable_export.csv";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+
   return (
     <div>
       <h2 className="text-2xl font-bold text-blue-700 mb-4">
@@ -133,6 +185,7 @@ export default function Timetable(){
           <button className="btn bg-green-600" onClick={exportExcel}>Excel</button>
           <button className="btn bg-rose-600" onClick={exportPDF}>PDF</button>
           <button className="btn bg-sky-500" onClick={exportPNG}>PNG</button>
+          <button className="btn bg-purple-600" onClick={exportCSV}>CSV</button>
         </div>
       )}
 

@@ -133,8 +133,8 @@ export default function RoomUsage() {
           value={roomSelected}
           onChange={(e) => setRoomSelected(e.target.value)}
         >
-          {rooms.map((r) => (
-            <option key={r.id} value={r.id}>
+          {rooms.map((r, i) => (
+            <option key={`${r.id}-${i}`} value={r.id}>
               {r.name}
             </option>
           ))}
@@ -199,9 +199,6 @@ export default function RoomUsage() {
                               กลุ่มเรียน: {groupName}
                               {info.studentCount != null &&
                                 ` (จำนวนนักเรียน ${info.studentCount} คน)`}
-                            </div>
-                            <div className="text-xs">
-                              แผนก: {info.departmentName}
                             </div>
                           </div>
                         </td>

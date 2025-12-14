@@ -198,14 +198,16 @@ export default function TeacherTimetable() {
                             </div>
                             <div className="font-bold">{subject?.name}</div>
                             <div className="text-sm">
-                              ห้อง: {room?.name || "-"}
+                              กลุ่มเรียน: {groupName}
+                              {info.studentCount != null &&
+                                ` (จำนวนนักเรียน ${info.studentCount} คน)`}
                             </div>
                             <div className="text-sm">
-                              กลุ่มเรียน: {groupName}
+                              ห้อง: {room?.name || "-"}
                             </div>
                             <div className="text-xs">
                               แผนก: {info.departmentName}
-                            </div>                            
+                            </div>
                           </div>
                         </td>
                       );

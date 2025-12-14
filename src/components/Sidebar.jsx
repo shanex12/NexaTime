@@ -7,15 +7,14 @@ export default function Sidebar({ onNavigate, active, onLogout}) {
     { key: 'teachers', label: 'จัดการครู' },
     { key: 'subjects', label: 'จัดการวิชา' },
     { key: 'rooms', label: 'จัดการห้องเรียน' },
-    { key: 'departments', label: 'จัดการแผนก' },  // ✔ แสดงแผนกแน่นอน
     { key: 'classgroups', label: 'จัดการกลุ่มเรียน' },
+    {key: 'groupsubjects', label: 'จัดการรายวิชากลุ่มเรียน' },
     { key: 'settings', label: 'ตั้งค่า AI' },
     { key: 'generate', label: 'สร้างตาราง' },
     { key: 'teacherTimetable', label: 'ตารางครู' },
     { key: 'timetable', label: 'ตารางเรียน' },
     { key: 'roomUsage', label: 'การใช้งานห้องเรียน' },
     { key: 'validate', label: 'ตรวจสอบตาราง' },
-    { key: 'dataImport', label: 'นำเข้า/ส่งออกข้อมูล (ไฟล์)' }
 
   ];
 

@@ -234,7 +234,6 @@ export default function Generate() {
 
   function matchRooms(subj) {
     console.log("DEBUG: matchRooms()", subj.name);
-    // ปรับปรุงภายหลังตามประเภทห้อง / ขนาดห้อง / tag  -> ใส่โค้ดที่นี่
     return rooms;
   }
 

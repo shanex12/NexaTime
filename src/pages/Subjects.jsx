@@ -1,3 +1,5 @@
+// src/pages/Subjects.jsx
+
 import React, { useState, useEffect } from "react";
 import { loadData, saveData, uid } from "../utils";
 import { parseCSV } from "../csv";
@@ -9,10 +11,14 @@ export default function Subjects() {
 
   const emptyForm = {
     id: "",
+    subject_id: "",
     name: "",
     periods: 1,
+    theory: 0,
+    practice: 0,
+    credit: 0,
     room_type: "theory",
-    room_tag: "",              // ⭐ เพิ่ม tag ห้อง
+    room_tag: "",
     color: "#0ea5e9",
     teachers: [],
     periods_per_session: 1,
@@ -23,11 +29,18 @@ export default function Subjects() {
   const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState(false);
 
-  // โหลดข้อมูลเริ่มต้น
   useEffect(() => {
     const d = loadData();
     if (d) {
-      setSubjects(d.subjects || []);
+      setSubjects(
+        (d.subjects || []).map((s) => ({
+          theory: s.theory || 0,
+          practice: s.practice || 0,
+          credit: s.credit || 0,
+          subject_id: s.subject_id || s.id || "",
+          ...s
+        }))
+      );
       setAllTeachers(d.teachers || []);
       setDepartments(d.departments || []);
     }
@@ -52,9 +65,12 @@ export default function Subjects() {
     if (!form.isGeneral && form.departments.length === 0)
       return alert("กรุณาเลือกแผนกที่เปิดสอน");
 
+    const id = form.id || form.subject_id || uid("s");
+
     const item = {
       ...form,
-      id: form.id || uid("s")
+      id,
+      subject_id: form.subject_id || id
     };
 
     const newList = [...subjects.filter((s) => s.id !== item.id), item];
@@ -68,10 +84,14 @@ export default function Subjects() {
   function handleEdit(s) {
     setForm({
       ...s,
+      subject_id: s.subject_id || s.id,
       teachers: s.teachers || [],
       departments: s.departments || [],
       isGeneral: s.isGeneral || false,
-      room_tag: s.room_tag || ""   // ⭐ โหลด room_tag
+      room_tag: s.room_tag || "",
+      theory: s.theory || 0,
+      practice: s.practice || 0,
+      credit: s.credit || 0
     });
     setEditing(true);
   }
@@ -107,41 +127,97 @@ export default function Subjects() {
     });
   }
 
-function handleImportCSV(e) {
-  const file = e.target.files[0];
+  // ✅ นำเข้า subject.csv ตาม pdf:
+  // subject_id, subject_name, theory, practice, credit
+  function handleImportCSV(e) {
+  const input = e.target;
+  const file = input.files[0];
   if (!file) return;
 
-  parseCSV(file, (rows) => {
-    const imported = rows.map(r => ({
-      id: uid("s"),
-      name: r.subject_name || "",
-      periods: Number(r.periods || 1),
-      room_type: "theory",
-      room_tag: r.room_tag || "",
-      color: "#0ea5e9",
-      teachers: [],
-      periods_per_session: 1,
-      departments: [],
-      isGeneral: false
-    }));
+  const reader = new FileReader();
 
-    const newList = [...subjects, ...imported];
-    setSubjects(newList);
-    persist(newList);
+  reader.onload = (ev) => {
+    const csvText = ev.target.result;
 
-    alert("นำเข้าวิชาเรียบร้อย");
-  });
+    parseCSV(csvText, (rows) => {
+      console.log("Import subject.csv rows:", rows);
+
+      // subject_id ที่มีอยู่แล้วในระบบ
+      const existingIds = new Set(
+        subjects
+          .map(s => (s.subject_id || "").trim())
+          .filter(Boolean)
+      );
+
+      // subject_id ที่ import รอบนี้ (กันซ้ำในไฟล์)
+      const importedIds = new Set();
+
+      const imported = rows
+        .map((r, index) => {
+          const rawId = (r.subject_id || "").trim();
+          const name = (r.subject_name || "").trim();
+
+          if (!name) return null; // ไม่มีชื่อวิชา ข้าม
+
+          // ❌ subject_id ซ้ำกับของเดิม
+          if (rawId && existingIds.has(rawId)) {
+            console.warn(`Row ${index + 2}: subject_id ซ้ำกับระบบ →`, rawId);
+            return null;
+          }
+
+          // ❌ subject_id ซ้ำกันเองในไฟล์
+          if (rawId && importedIds.has(rawId)) {
+            console.warn(`Row ${index + 2}: subject_id ซ้ำในไฟล์ →`, rawId);
+            return null;
+          }
+
+          const subject_id = rawId || uid("s");
+          importedIds.add(subject_id);
+
+          const theory = Number(r.theory) || 0;
+          const practice = Number(r.practice) || 0;
+          const credit = Number(r.credit) || 0;
+          const periods = theory + practice || 1;
+
+          return {
+            id: subject_id,
+            subject_id,
+            name,
+            theory,
+            practice,
+            credit,
+            periods,
+            room_type: theory > 0 ? "theory" : "practice",
+            room_tag: "",
+            color: "#0ea5e9",
+            teachers: [],
+            periods_per_session: 1,
+            departments: [],
+            isGeneral: false
+          };
+        })
+        .filter(Boolean);
+
+      const merged = [...subjects, ...imported];
+
+      setSubjects(merged);
+      persist(merged);
+
+      alert("นำเข้าวิชาเรียบร้อย (subject_id ไม่ซ้ำ)");
+      input.value = "";
+    });
+  };
+
+  reader.readAsText(file, "utf-8");
 }
 
 
+  
   return (
     <div>
-      <h2 className="text-2xl font-bold text-blue-700 mb-4">
-        จัดการวิชา
-      </h2>
+      <h2 className="text-2xl font-bold text-blue-700 mb-4">จัดการวิชา</h2>
 
       <div className="grid grid-cols-2 gap-4">
-
         {/* ฟอร์มเพิ่ม/แก้ไข */}
         <div className="card p-4">
           <h3 className="font-semibold mb-2">
@@ -169,18 +245,22 @@ function handleImportCSV(e) {
           <select
             className="w-full p-2 border mb-2"
             value={form.room_type}
-            onChange={(e) => setForm({ ...form, room_type: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, room_type: e.target.value })
+            }
           >
             <option value="theory">ห้องเรียนปกติ</option>
             <option value="lab">ห้องปฏิบัติการ</option>
           </select>
 
-          {/* ⭐ เพิ่ม Room Tag */}
+          {/* Room Tag */}
           <input
             className="w-full p-2 border mb-2"
             placeholder="Room Tag (เช่น computer, network, science)"
             value={form.room_tag}
-            onChange={(e) => setForm({ ...form, room_tag: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, room_tag: e.target.value })
+            }
           />
 
           <label className="text-sm">คาบต่อครั้ง</label>
@@ -217,7 +297,7 @@ function handleImportCSV(e) {
                     checked={(form.teachers || []).includes(t.id)}
                     onChange={() => toggleTeacher(t.id)}
                   />{" "}
-                  {t.name} ({t.short})
+                  {t.name} {t.short ? `(${t.short})` : ""}
                 </label>
               ))}
 
@@ -264,7 +344,7 @@ function handleImportCSV(e) {
           </div>
 
           {/* ปุ่ม */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-3">
             <button className="btn bg-blue-600" onClick={handleAdd}>
               {editing ? "บันทึก" : "เพิ่ม"}
             </button>
@@ -279,49 +359,40 @@ function handleImportCSV(e) {
               ยกเลิก
             </button>
           </div>
+
           <label className="btn bg-green-600 mb-2 cursor-pointer">
-  📂 นำเข้าไฟล์ CSV
-  <input type="file" hidden accept=".csv" onChange={handleImportCSV} />
-</label>
+            📂 นำเข้า subject.csv
+            <input type="file" hidden accept=".csv" onChange={handleImportCSV} />
+          </label>
         </div>
 
         {/* รายการวิชา */}
         <div className="card p-4">
           <h3 className="font-semibold mb-2">รายการวิชา</h3>
 
-          <div className="space-y-2 max-h-96 overflow-auto">
+          <div className="space-y-2 max-h-96 overflow-auto text-sm">
             {subjects.map((s) => (
               <div
                 key={s.id}
-                className="p-2 border rounded flex justify-between items-center"
+                className="p-2 border rounded flex justify-between items-start"
               >
                 <div>
-                  <div className="font-semibold">{s.name}</div>
-
-                  <div className="text-sm text-slate-500">
-                    คาบ/สัปดาห์: {s.periods} | ต่อครั้ง:{" "}
-                    {s.periods_per_session} | ห้อง: {s.room_type}
-                  </div>
-
-                  {/* ⭐ แสดง Room Tag */}
-                  {s.room_tag && (
-                    <div className="text-xs text-blue-600">
-                      ห้องที่ต้องการ: {s.room_tag}
+                  <div className="font-semibold text-base">{s.name}</div>
+                  {s.subject_id && (
+                    <div className="text-xs text-slate-500">
+                      รหัสวิชา: {s.subject_id}
                     </div>
                   )}
-
-                  <div className="text-xs text-slate-500">
-                    {s.isGeneral
-                      ? "วิชาสามัญ (ทุกแผนก)"
-                      : `แผนก: ${
-                          (s.departments || [])
-                            .map((id) => {
-                              const dep = departments.find((d) => d.id === id);
-                              return dep ? dep.name : "";
-                            })
-                            .join(", ")
-                        }`}
-                  </div>
+                  {(s.theory || s.practice) && (
+                    <div className="text-xs text-slate-500">
+                      ทฤษฎี: {s.theory || 0} | ปฏิบัติ: {s.practice || 0}
+                    </div>
+                  )}
+                  {s.credit !== undefined && (
+                    <div className="text-xs text-slate-500">
+                      หน่วยกิต: {s.credit}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2">
@@ -331,7 +402,6 @@ function handleImportCSV(e) {
                   >
                     แก้ไข
                   </button>
-
                   <button
                     className="px-2 py-1 bg-red-500 text-white rounded"
                     onClick={() => handleDelete(s.id)}
@@ -343,8 +413,8 @@ function handleImportCSV(e) {
             ))}
 
             {subjects.length === 0 && (
-              <div className="text-sm text-slate-500">
-                ยังไม่มีข้อมูลวิชา
+              <div className="text-slate-500 text-sm">
+                ยังไม่มีวิชาในระบบ
               </div>
             )}
           </div>

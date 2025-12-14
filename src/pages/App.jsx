@@ -10,15 +10,14 @@ import Dashboard from "./Dashboard.jsx";
 import Teachers from "./Teachers.jsx";
 import Subjects from "./Subjects.jsx";
 import Rooms from "./Rooms.jsx";
-import Departments from "./Departments.jsx";
 import Classgroups from "./Classgroups.jsx";
+import GroupSubjects from "./GroupSubjects";
 import Settings from "./Settings.jsx";
 import Generate from "./Generate.jsx";
 import TeacherTimetable from "./TeacherTimetable";
 import Timetable from "./Timetable.jsx";
 import RoomUsage from "./RoomUsage.jsx";
 import ValidateTimetable from "./ValidateTimetable";
-import DataImportExport from "./DataImportExport.jsx";
 
 export default function App() {
   const [page, setPage] = useState("login");
@@ -146,11 +145,11 @@ export default function App() {
       case "rooms":
         return <Rooms />;
 
-      case "departments":
-        return <Departments />;
-
       case "classgroups":
         return <Classgroups />;
+
+      case "groupsubjects":
+        return <GroupSubjects />;
 
       case "settings":
         return <Settings />;
@@ -169,10 +168,6 @@ export default function App() {
 
       case "validate":
         return <ValidateTimetable />;
-
-      // ⭐ หน้าใหม่ นำเข้า/ส่งออกข้อมูล
-      case "dataImport":
-        return <DataImportExport />;
 
       default:
         return <LoginPage onLogin={handleLogin} />;

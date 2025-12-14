@@ -27,21 +27,31 @@ export default function Timetable(){
   const ref = useRef();
   const [data, setData] = useState(loadData());
 
-  const departments = data.departments || [];
+  // โหลดข้อมูลใหม่เมื่อหน้ากลับมาให้โฟกัส
+  useEffect(() => {
+    const handleFocus = () => {
+      const d = loadData();
+      console.log('Reload data on focus', d);
+      setData(d);
+      if (d && d.lastResult && d.lastResult.group) setSelectedGroup(d.lastResult.group);
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
   const classGroups = data.classGroups || [];
 
-  const [selectedDept, setSelectedDept] = useState("");
-  const [selectedGroup, setSelectedGroup] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState(data.lastResult?.group || "");
 
   const all = data.allTimetables || {};
+  console.log('Timetable data allTimetables:', all);
   const rooms = data.rooms || [];
   const daysCount = data.settings?.days || 5;
   const slotsCount = data.settings?.timeslots_per_day || 6;
 
-  // กลุ่มเรียนเฉพาะแผนกที่เลือก
-  const filteredGroups = classGroups.filter(
-    c => !selectedDept || c.department_id === selectedDept
-  );
+  // ทุกกลุ่มเรียน
+  const filteredGroups = classGroups;
 
   const assignments = all[selectedGroup] || [];
 
@@ -94,24 +104,6 @@ export default function Timetable(){
         ตารางเรียน {selectedGroup ? `— ${selectedGroup}` : ""}
       </h2>
 
-      {/* เลือกแผนก */}
-      <div className="mb-3">
-        <label className="font-semibold">เลือกแผนก: </label>
-        <select
-          className="border p-2 rounded ml-2"
-          value={selectedDept}
-          onChange={(e)=>{
-            setSelectedDept(e.target.value);
-            setSelectedGroup("");
-          }}
-        >
-          <option value="">-- เลือกแผนก --</option>
-          {departments.map(d => (
-            <option key={d.id} value={d.id}>{d.name}</option>
-          ))}
-        </select>
-      </div>
-
       {/* เลือกกลุ่มเรียน */}
       <div className="mb-4">
         <label className="font-semibold">เลือกกลุ่มเรียน: </label>
@@ -121,10 +113,18 @@ export default function Timetable(){
           onChange={e=>setSelectedGroup(e.target.value)}
         >
           <option value="">-- เลือกกลุ่มเรียน --</option>
-          {filteredGroups.map(c => (
-            <option key={c.id} value={c.name}>{c.name}</option>
-          ))}
+          {filteredGroups.map(c => {
+            const key = (c && typeof c === 'object') ? (c.id || c.name) : c;
+            const val = (c && typeof c === 'object') ? (c.name || c.id) : c;
+            return <option key={key} value={val}>{val}</option>;
+          })}
         </select>
+        <button 
+          className="ml-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          onClick={() => setData(loadData())}
+        >
+          ⟲ รีโหลดข้อมูล
+        </button>
       </div>
 
       {/* ปุ่มส่งออก */}
@@ -196,7 +196,7 @@ export default function Timetable(){
         </div>
       ) : (
         <div className="text-center text-gray-500 mt-6">
-          กรุณาเลือกแผนกและกลุ่มเรียนก่อน
+          กรุณาเลือกกลุ่มเรียนก่อน
         </div>
       )}
     </div>

@@ -10,7 +10,7 @@ export default function ValidateTimetable() {
   const teachers = data.teachers || [];
   const allTimetables = data.allTimetables || {};
 
-  const [selectedDept, setSelectedDept] = useState("");
+  // removed department selection — keep only group
   const [selectedGroup, setSelectedGroup] = useState("");
   const [filterType, setFilterType] = useState("ALL"); // ALL | ROOM | TEACHER | CLASS | CAPACITY
 
@@ -57,13 +57,9 @@ export default function ValidateTimetable() {
   const filteredAssignments = useMemo(() => {
     return allAssignments.filter(a => {
       if (selectedGroup && a.class_group !== selectedGroup) return false;
-      if (selectedDept) {
-        const cg = classGroupMap.get(a.class_group);
-        if (!cg || cg.department_id !== selectedDept) return false;
-      }
       return true;
     });
-  }, [allAssignments, selectedDept, selectedGroup, classGroupMap]);
+  }, [allAssignments, selectedGroup]);
 
   // -------------------------------
   // ฟังก์ชันช่วยเช็กว่าเวลา overlap หรือไม่
@@ -213,23 +209,6 @@ export default function ValidateTimetable() {
       {/* ตัวกรองด้านบน */}
       <div className="card p-4 mb-4 grid md:grid-cols-4 gap-3 text-sm">
         <div>
-          <div className="font-medium mb-1">เลือกแผนก</div>
-          <select
-            className="w-full p-2 border rounded"
-            value={selectedDept}
-            onChange={e => {
-              setSelectedDept(e.target.value);
-              setSelectedGroup("");
-            }}
-          >
-            <option value="">— ทุกแผนก —</option>
-            {departments.map(d => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
           <div className="font-medium mb-1">เลือกกลุ่มเรียน</div>
           <select
             className="w-full p-2 border rounded"
@@ -237,11 +216,11 @@ export default function ValidateTimetable() {
             onChange={e => setSelectedGroup(e.target.value)}
           >
             <option value="">— ทุกกลุ่ม —</option>
-            {classGroups
-              .filter(c => !selectedDept || c.department_id === selectedDept)
-              .map(c => (
-                <option key={c.id} value={c.name}>{c.name}</option>
-              ))}
+            {classGroups.map(c => {
+              const key = (c && typeof c === 'object') ? (c.id || c.name) : c;
+              const val = (c && typeof c === 'object') ? (c.name || c.id) : c;
+              return <option key={key} value={val}>{val}</option>;
+            })}
           </select>
         </div>
 

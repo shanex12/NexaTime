@@ -186,6 +186,7 @@ export default function TeacherTimetable() {
                       const room = rooms.find((r) => r.id === s.room_id);
                       const groupName = s.class_group;
                       const info = getGroupInfo(groupName);
+                      const course_id = s.course_id;
 
                       cells.push(
                         <td key={slot} className="border p-2" colSpan={dur}>
@@ -196,7 +197,7 @@ export default function TeacherTimetable() {
                             <div className="text-xs mb-1">
                               {getTimeRange(s.slot, s.duration)}
                             </div>
-                            <div className="font-bold">{subject?.name}</div>
+                            <div className="font-bold text-md">{subject?.name} ({course_id})</div>
                             <div className="text-sm">
                               กลุ่มเรียน: {groupName}
                               {info.studentCount != null &&

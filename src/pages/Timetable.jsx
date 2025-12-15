@@ -223,12 +223,13 @@ function exportCSV() {
                         const teacher = data.teachers?.find(t=>t.id===s.teacher_id);
                         const room = rooms.find(r=>r.id===s.room_id);
                         const bg = subj?.color || "#60a5fa";
+                        const course_id = s.course_id;
 
                         cells.push(
                           <td key={slot} className="border p-2" colSpan={dur}>
                             <div className="p-2 text-white rounded" style={{ background: bg }}>
                               <div className="text-xs mb-1">{getTimeRange(s.slot,s.duration)}</div>
-                              <div className="font-bold">{subj?.name || s.course_id}</div>
+                              <div className="font-bold text-md">{subj?.name} ({course_id})</div>
                               <div className="text-sm">ครู: {teacher?.name || "-"}</div>
                               <div className="text-sm">ห้อง: {room?.name || "-"}</div>
                             </div>

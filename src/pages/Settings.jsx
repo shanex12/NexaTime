@@ -14,6 +14,7 @@ export default function Settings() {
     spreadDays: true,       // กระจายวิชาข้ามวัน
     strictRoomTag: true,    // เข้มงวด room_tag
     balanceTeachers: true,  // กระจายภาระครู
+    isMatchRoomType: false   // บังคับให้จัดตารางแยกห้องเรียน
   });
 
   useEffect(() => {
@@ -149,6 +150,21 @@ export default function Settings() {
                 <div className="text-xs text-gray-500">
                   AI จะพยายามไม่เลือกคาบที่ {lunchSlotDisplay} เป็นตัวเลือกแรก ๆ
                   เว้นแต่หาคาบอื่นไม่ได้จริง ๆ
+                </div>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={settings.isMatchRoomType}
+                onChange={e => handleChange("isMatchRoomType", e.target.checked)}
+              />
+              <div>
+                <div className="font-medium">บังคับให้จัดตารางแยกห้องเรียน</div>
+                <div className="text-xs text-gray-500">
+                  AI จะตรวจสอบและแยกประเภทห้องเรียนตามที่ระบุในข้อมูลห้องเรียน ปฏิบัติกับทฤษฎี
                 </div>
               </div>
             </label>

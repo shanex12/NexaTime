@@ -95,7 +95,7 @@ export default function Teachers() {
       teacher_id,
       short
     });
-
+ console.log("Saving teacher:", item);
     const newList = [
       ...teachers.filter((t) => t.id !== item.id),
       item
@@ -341,7 +341,7 @@ function handleImportTeachCSV(e) {
             }
           /> */}
 
-          {/* จำนวนคาบสูงสุดต่อวัน */}
+          {/* จำนวนคาบสูงสุดต่อวัน
           <div className="mb-3">
             <label className="block font-semibold mb-1">
               จำนวนคาบสูงสุดที่สอนได้ใน 1 วัน
@@ -363,7 +363,7 @@ function handleImportTeachCSV(e) {
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
 
           {/* ตารางเวลาที่ไม่ว่าง */}
           <div className="mt-3">

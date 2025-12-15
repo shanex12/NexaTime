@@ -114,7 +114,7 @@ export default function ClassGroups() {
         const exists = merged.find(
           (x) =>
             (x.group_id && x.group_id === g.group_id) ||
-            x.name.trim() === g.name.trim()
+            x.name === g.name
         );
         if (!exists) merged.push(g);
       }

@@ -17,7 +17,7 @@ export default function Subjects() {
     theory: 0,
     practice: 0,
     credit: 0,
-    room_type: "theory",
+    room_type: "",
     room_tag: "",
     color: "#0ea5e9",
     teachers: [],
@@ -72,6 +72,8 @@ export default function Subjects() {
       id,
       subject_id: form.subject_id || id
     };
+    console.log("New subjects item:", item);
+    
 
     const newList = [...subjects.filter((s) => s.id !== item.id), item];
     setSubjects(newList);
@@ -232,10 +234,6 @@ function handleImportCSV(e) {
         const periods = theory + practice || 1;
         console.log("periods:", periods);
         console.log("periods_per_session raw:", r.periods_per_session);
-        // let per_1 = Number(r.periods_per_session);
-        // let per_2 = Number(r.periods_per_session ?? periods)
-        // let per_3 = Number(r.periods_per_session || periods) || 1;
-        // console.log("periods_per_session parsed:", per_1, per_2, per_3);
 
         const periods_per_session =
           Number(r.periods_per_session || periods);  //เรียกจาก csv 
@@ -244,9 +242,12 @@ function handleImportCSV(e) {
         const subj = {
           id: subject_id,
           subject_id,
+          isGeneral: false,
           name,
           theory,
           practice,
+          room_tag: "",
+          room_type: "",
           credit,
           periods,
           periods_per_session,
@@ -261,7 +262,7 @@ function handleImportCSV(e) {
 
       // แปลงกลับเป็น array
       const merged = Array.from(subjectMap.values());
-
+      console.log("Merged subjects:", merged);
       setSubjects(merged);
       persist(merged);
 
@@ -315,19 +316,21 @@ function handleImportCSV(e) {
             }
           />
 
-          {/* ประเภทห้องเรียน
+          {/* {ประเภทห้องเรียน}
+          <label className="text-sm">ประเภทห้องเรียน</label>
           <select
             className="w-full p-2 border mb-2"
             value={form.room_type}
             onChange={(e) =>
               setForm({ ...form, room_type: e.target.value })
             }
-          >
-            <option value="theory">ห้องเรียนปกติ</option>
+          ><option value="" selected disabled>-- เลือกประเภทห้อง --</option>
+            <option value="classroom">ห้องเรียนปกติ</option>
             <option value="lab">ห้องปฏิบัติการ</option>
           </select> */}
 
-          {/* Room Tag
+          {/* {Room Tag} */}
+          <label className="text-sm">ระบุ Tag ห้องเรียน</label>
           <input
             className="w-full p-2 border mb-2"
             placeholder="Room Tag (เช่น computer, network, science)"
@@ -335,7 +338,7 @@ function handleImportCSV(e) {
             onChange={(e) =>
               setForm({ ...form, room_tag: e.target.value })
             }
-          /> */}
+          /> 
 
           <label className="text-sm">คาบต่อครั้ง</label>
           <input
@@ -395,7 +398,7 @@ function handleImportCSV(e) {
             </div>
           </div>
 
-          {/* แผนก
+          {/* { แผนกที่เปิดสอน } */}
           <div className="mb-2">
             <div className="text-sm mb-1">แผนกที่เปิดสอน</div>
 
@@ -429,7 +432,7 @@ function handleImportCSV(e) {
                 )}
               </div>
             )}
-          </div> */}
+          </div>
 
           {/* ปุ่ม */}
           <div className="flex gap-2 mb-3">
@@ -479,6 +482,16 @@ function handleImportCSV(e) {
                   {s.credit !== undefined && (
                     <div className="text-xs text-slate-500">
                       หน่วยกิต: {s.credit}
+                    </div>
+                  )}
+                  {s.room_type !== undefined && (
+                    <div className="text-xs text-slate-500">
+                      ประเภทห้องเรียน: {s.room_type}
+                    </div>
+                  )}
+                  {s.room_tag !== undefined && (
+                    <div className="text-xs text-slate-500">
+                      Tag ห้องเรียน: {s.room_tag}
                     </div>
                   )}
                 </div>

@@ -222,8 +222,10 @@ function exportCSV() {
                         const subj = data.subjects?.find(x => x.id === s.course_id);
                         const teacher = data.teachers?.find(t=>t.id===s.teacher_id);
                         const room = rooms.find(r=>r.id===s.room_id);
-                        const bg = subj?.color || "#60a5fa";
+                        const bg = s.color || subj?.color;
                         const course_id = s.course_id;
+                        const sessionType = s.sessionType;
+                        // const 
 
                         cells.push(
                           <td key={slot} className="border p-2" colSpan={dur}>
@@ -231,7 +233,7 @@ function exportCSV() {
                               <div className="text-xs mb-1">{getTimeRange(s.slot,s.duration)}</div>
                               <div className="font-bold text-md">{subj?.name} ({course_id})</div>
                               <div className="text-sm">ครู: {teacher?.name || "-"}</div>
-                              <div className="text-sm">ห้อง: {room?.name || "-"}</div>
+                              <div className="text-sm">ห้อง: {room?.name || "-"} ({sessionType})</div>
                             </div>
                           </td>
                         );

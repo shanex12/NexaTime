@@ -165,7 +165,7 @@ export default function Rooms() {
             />
           </div> */}
 
-          {/* ประเภทห้อง
+          {/* {ประเภทห้อง} */}
           <div className="mb-3">
             <label className="block mb-1 font-medium">ประเภทห้องเรียน</label>
             <select
@@ -178,30 +178,22 @@ export default function Rooms() {
                 })
               }
             >
-              <option value="">-- เลือกประเภทห้อง --</option>
-              <option value="classroom">ห้องเรียนทั่วไป</option>
-              <option value="computer">ห้องคอมพิวเตอร์</option>
-              <option value="science">ห้องวิทยาศาสตร์</option>
-              <option value="language">ห้องภาษา</option>
+              <option value="" defaultValue disabled>-- เลือกประเภทห้อง --</option>
+              <option value="theory">ห้องเรียนทั่วไป</option>
+              <option value="practice">ห้องเรียนปฏิบัติ</option>
             </select>
-          </div> */}
+          </div>
 
-          {/* Room tag
-          <div className="mb-3">
-            <label className="block mb-1 font-medium">
-              Room Tag (เช่น computer, network, science)
-            </label>
-            <input
-              className="w-full p-2 border rounded"
-              value={form.room_tag}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  room_tag: e.target.value
-                })
-              }
-            />
-          </div> */}
+          {/* {Room Tag} */}
+          <label className="text-sm">ระบุ Tag ห้องเรียน</label>
+          <input
+            className="w-full p-2 border mb-2"
+            placeholder="Room Tag (เช่น computer, network, science)"
+            value={form.room_tag}
+            onChange={(e) =>
+              setForm({ ...form, room_tag: e.target.value })
+            }
+          /> 
 
           <div className="flex gap-2 mt-2">
             <button className="btn bg-blue-600" onClick={handleSave}>
@@ -248,14 +240,14 @@ export default function Rooms() {
                       รหัสห้อง: {r.room_id}
                     </div>
                   )}
-                  {r.room_type && (
+                  {r.room_type !== undefined && (
                     <div className="text-xs text-slate-500">
-                      ประเภท: {r.room_type}
+                      ประเภทห้องเรียน: {r.room_type}
                     </div>
                   )}
-                  {r.room_tag && (
+                  {r.room_tag !== undefined && (
                     <div className="text-xs text-slate-500">
-                      Tag: {r.room_tag}
+                      Tag ห้องเรียน: {r.room_tag}
                     </div>
                   )}
                 </div>

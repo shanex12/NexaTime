@@ -33,14 +33,22 @@ const dayNames = ["จันทร์","อังคาร","พุธ","พฤ�
 
 export default function Timetable(){
 
+
   const ref = useRef();
   const [data, setData] = useState(loadData());
-  const [selectedGroup, setSelectedGroup] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState(() => {
+    const d = loadData();
+    if (d?.lastResult?.group) return d.lastResult.group;
+    const groups = d?.classGroups || [];
+    return groups.length > 0 ? groups[0].name : "";
+  });
 
-  /* 🔑 FIX 1: sync selectedGroup กับ data ทุกครั้ง */
+  // sync selectedGroup กับข้อมูลใหม่ ถ้ามีการเปลี่ยนแปลง data
   useEffect(() => {
     if (data?.lastResult?.group) {
       setSelectedGroup(data.lastResult.group);
+    } else if ((data?.classGroups || []).length > 0) {
+      setSelectedGroup(prev => prev || data.classGroups[0].name);
     }
   }, [data]);
 
@@ -267,19 +275,6 @@ function exportCSV() {
       {/* ตาราง */}
       {selectedGroup ? (
         <div ref={ref} className="p-4 bg-white shadow rounded overflow-auto">
-          
-          {/* ===== SIMPLE HEADER (Student View Style) ===== */}
-          <div className="mb-4 bg-blue-50 p-3 rounded border border-blue-300">
-            <h3 className="text-lg font-bold text-blue-900 mb-2">ตารางเรียน {selectedGroup}</h3>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="font-semibold">จำนวนนักเรียน:</span> {studentCount}
-              </div>
-              <div>
-                <span className="font-semibold">อาจารย์ที่ปรึกษา:</span> {advisorName}
-              </div>
-            </div>
-          </div>
           
           {/* ===== FORMAL HEADER (สธ.02 Style) ===== */}
           <div className="mb-4 border-2 border-black p-2">

@@ -793,8 +793,13 @@ if (sessionRetry === 1 || sessionRetry === SESSION_RETRY_LIMIT) {
             ? teachers.filter(t => subj.teachers.includes(t.id))
             : teachers;
 
+          // ✅ สุ่มลำดับครูเพื่อหลีกเลี่ยงตารางซ้ำ (แต่เฉพาะเมื่อ retry > 1)
+          const orderedCandidates = sessionRetry === 1 
+            ? candidates 
+            : candidates.sort(() => Math.random() - 0.5);
+
           teacher = chooseTeacher(
-            candidates,
+            orderedCandidates,
             assignments,
             globalAssignments
           );
@@ -814,7 +819,13 @@ if (sessionRetry === 1 || sessionRetry === SESSION_RETRY_LIMIT) {
 
         // 🏫 ห้อง
         const roomsToTry = matchRooms(subj);
-        for (const room of roomsToTry) {
+        
+        // ✅ สุ่มลำดับห้องเพื่อหลีกเลี่ยงตารางซ้ำ (แต่เฉพาะเมื่อ retry > 1)
+        const orderedRooms = sessionRetry === 1 
+          ? roomsToTry 
+          : roomsToTry.sort(() => Math.random() - 0.5);
+        
+        for (const room of orderedRooms) {
 
           if (
             isRoomBusy(
@@ -958,7 +969,7 @@ setLog(p =>
 
       <div className="card p-4 space-y-4">
         <select
-          className="border p-3 rounded-lg"
+          className="border p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full shadow-sm"
           value={group}
           onChange={e => setGroup(e.target.value)}
         >
@@ -971,26 +982,26 @@ setLog(p =>
         </select>
 
         <button
-          className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-blue-600 shadow-md hover:bg-blue-700 hover:shadow-lg transition duration-200 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed text-lg tracking-wide"
           disabled={running}
           onClick={generateOneClassGroup}
         >
-          🎯 สร้างตาราง (เฉพาะกลุ่ม)
+          สร้างตาราง (เฉพาะกลุ่ม)
         </button>
 
         <button
-          className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-emerald-600 shadow-md hover:bg-emerald-700 hover:shadow-lg transition duration-200 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed text-lg tracking-wide"
           disabled={running}
           onClick={generateAllClassGroup}
         >
-          🚀 สร้างตารางทั้งหมด
+          สร้างตารางทั้งหมด
         </button>
 
         <button
-          className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 w-full"
+          className="w-full py-3 px-4 rounded-lg font-semibold text-white bg-red-600 shadow-md hover:bg-red-700 hover:shadow-lg transition duration-200 ease-in-out text-lg tracking-wide"
           onClick={clearAllTables}
         >
-          🗑️ เคลียร์ตารางทั้งหมด
+          เคลียร์ตารางทั้งหมด
         </button>
 
         <pre className="bg-gray-100 p-2 rounded h-40 overflow-auto text-sm whitespace-pre-wrap">

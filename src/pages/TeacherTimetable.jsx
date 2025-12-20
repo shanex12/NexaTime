@@ -164,7 +164,7 @@ export default function TeacherTimetable() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-blue-700 mb-4">ตารางสอนรายครู</h2>
+      <h2 className="text-2xl font-bold text-blue-700 mb-4">ตารางสอนครู</h2>
 
       <div className="mb-6">
         <label className="font-semibold text-gray-700 block mb-2">เลือกครู: </label>
@@ -231,9 +231,10 @@ export default function TeacherTimetable() {
                         <td key={slot} className="border p-2" colSpan={dur}>
                           <div
                             className="p-2 text-white rounded"
-                            style={{ background: subject?.color || "#60a5fa" }}
+                            style={{ background: subject?.color || "#3b82f6" }}
                           >
-                            <div className="font-bold text-md">{subject?.name} ({course_id})</div>
+                            <div className="text-xs font-normal">({course_id})</div>
+                            <div className="font-bold text-md">{subject?.name}</div>
                             <div className="text-sm">
                               กลุ่มเรียน: {groupName}
                               {info.studentCount != null &&
@@ -242,9 +243,9 @@ export default function TeacherTimetable() {
                             <div className="text-sm">
                               ห้อง: {room?.name || "-"}
                             </div>
-                            <div className="text-xs">
+                            {/* <div className="text-xs">
                               แผนก: {info.departmentName}
-                            </div>
+                            </div> */}
                           </div>
                         </td>
                       );

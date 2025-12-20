@@ -73,6 +73,16 @@ export default function RoomUsage() {
     };
   }
 
+  // helper: ตรวจสอบว่าเป็น homeroom หรือไม่ และดึงชื่อครูที่ปรึกษา
+  function isHomeroom(assignment) {
+    return assignment.sessionType === "homeroom" || assignment.course_id === "homeroom";
+  }
+
+  function getAdvisorName(groupName) {
+    const cg = classGroups.find((c) => c.name === groupName);
+    return cg?.advisor || "ครูที่ปรึกษา";
+  }
+
   // Export Excel
   function exportExcel() {
     const rows = assignments.map((a) => {
@@ -222,18 +232,20 @@ export default function RoomUsage() {
                       const teacher = data.teachers?.find((t) => t.id === s.teacher_id);
                       const groupName = s.class_group;
                       const info = getGroupInfo(groupName);
+                      const isHR = isHomeroom(s);
+                      const displayTeacherName = isHR ? getAdvisorName(groupName) : teacher?.name;
 
                       cells.push(
                         <td key={slot} className="border p-2" colSpan={dur}>
                           <div
                             className="p-2 text-white rounded"
-                            style={{ background: subject?.color || "#60a5fa" }}
+                            style={{ background: subject?.color || "#3b82f6" }}
                           >
                             <div className="text-xs mb-1">
                               {getTimeRange(s.slot, s.duration)}
                             </div>
                             <div className="font-bold">{subject?.name}</div>
-                            <div className="text-sm">ครู: {teacher?.name}</div>
+                            <div className="text-sm">ครู: {displayTeacherName}</div>
                             <div className="text-sm">
                               กลุ่มเรียน: {groupName}
                               {info.studentCount != null &&

@@ -14,8 +14,17 @@ export default function LoginPage({ onLogin }) {
     if (!username || !password) return alert("กรุณากรอกข้อมูลให้ครบ");
     if (username === "admin" && password === "1234") {
       onLogin("admin");
+    } else if (username === "teacher" && password === "1234") {
+      onLogin("teacher");
     } else {
       onLogin("student");
+    }
+  }
+
+  // รองรับการกดปุ่ม Enter
+  function handleKeyPress(e) {
+    if (e.key === "Enter") {
+      handleSubmit();
     }
   }
 
@@ -62,6 +71,7 @@ export default function LoginPage({ onLogin }) {
             className="flex-1 outline-none text-gray-700 bg-transparent"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            onKeyPress={handleKeyPress}
           />
         </div>
 
@@ -74,6 +84,7 @@ export default function LoginPage({ onLogin }) {
             className="flex-1 outline-none text-gray-700 bg-transparent"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyPress={handleKeyPress}
           />
         </div>
 

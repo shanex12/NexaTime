@@ -356,7 +356,7 @@ function handleImportCSV(e) {
             }
           /> 
 
-          <label className="text-sm">คาบต่อครั้ง</label>
+          {/* <label className="text-sm">คาบต่อครั้ง</label>
           <input
             type="number"
             min="1"
@@ -368,7 +368,7 @@ function handleImportCSV(e) {
                 periods_per_session: Number(e.target.value)
               })
             }
-          />
+          /> */}
 
           <label className="text-sm">หน่วยกิต</label>
           <input

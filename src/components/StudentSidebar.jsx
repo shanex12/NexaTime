@@ -1,12 +1,17 @@
 import React from "react";
 
-export default function StudentSidebar({ onClass, onRoom, onLogout }) {
+export default function StudentSidebar({ onNavigate, active, onLogout }) {
+  const menu = [
+    { key: "studentDashboard", label: "แดชบอร์ดนักเรียน" },
+    { key: "studentTimetable", label: "ตารางนักเรียน" },
+    { key: "studentRoomUsage", label: "ตารางการใช้ห้อง" },
+  ];
+
   return (
-    <aside className="w-64 h-screen fixed left-0 top-0 bg-slate-800 text-white flex flex-col p-4">
-    {/* Header */}
+    <div className="w-64 bg-slate-800 text-white min-h-screen p-4 flex flex-col shadow-xl">
+      {/* Header */}
       <div className="mb-6 text-center">
         <div className="flex justify-center mb-2">
-          {/* ให้เซฟไฟล์โลโก้ไว้ที่ public/logo.png */}
           <img
             src="/NexaTimeRVc.png"
             alt="โลโก้ NexaTime"
@@ -18,35 +23,29 @@ export default function StudentSidebar({ onClass, onRoom, onLogout }) {
       </div>
 
       {/* Menu */}
-      <ul className="flex-1 p-4 space-y-2">
-        <li className="px-3 py-2 rounded bg-slate-700 font-semibold">
-          Dashboard
-        </li>
-
-        <li
-          className="px-3 py-2 rounded hover:bg-slate-700 cursor-pointer"
-          onClick={onClass}
-        >
-          👥 ตารางนักเรียน
-        </li>
-
-        <li
-          className="px-3 py-2 rounded hover:bg-slate-700 cursor-pointer"
-          onClick={onRoom}
-        >
-          🏫 ตารางการใช้ห้อง
-        </li>
-      </ul>
+      <nav className="flex-1 space-y-1">
+        {menu.map((m) => (
+          <div
+            key={m.key}
+            onClick={() => onNavigate(m.key)}
+            className={`p-3 rounded-lg cursor-pointer transition-all 
+              ${active === m.key 
+                ? "bg-white text-slate-800 font-semibold shadow-sm" 
+                : "hover:bg-slate-700"}
+            `}
+          >
+            {m.label}
+          </div>
+        ))}
+      </nav>
 
       {/* Logout */}
-      <div className="p-4 border-t border-slate-700">
-        <button
-          onClick={onLogout}
-          className="w-full bg-red-600 hover:bg-red-700 py-2 rounded"
-        >
-          ออกจากระบบ
-        </button>
-      </div>
-    </aside>
+      <button
+        onClick={onLogout}
+        className="mt-4 bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg font-semibold transition-all"
+      >
+        ออกจากระบบ
+      </button>
+    </div>
   );
 }

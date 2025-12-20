@@ -3,11 +3,12 @@ import Sidebar from "../components/Sidebar.jsx";
 
 import LoginPage from "./LoginPage.jsx";
 import StudentDashboard from "./StudentDashboard.jsx";
-import StudentClassSelect from "./StudentClassSelect.jsx";
+import StudentSidebar from "../components/StudentSidebar.jsx";
 import StudentTimetablePage from "./StudentTimetable.jsx";
 import StudentRoomUsage from "./StudentRoomUsage.jsx";
 
 import Dashboard from "./Dashboard.jsx";
+import TeacherDashboard from "./TeacherDashboard.jsx";
 import Teachers from "./Teachers.jsx";
 import Subjects from "./Subjects.jsx";
 import Rooms from "./Rooms.jsx";
@@ -25,6 +26,7 @@ export default function App() {
   const [role, setRole] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
+  const [teacherId, setTeacherId] = useState(null);
 
   // history stack สำหรับย้อนกลับ
   const [history, setHistory] = useState([]);
@@ -63,9 +65,15 @@ export default function App() {
   // ✔ ล็อกอิน
   function handleLogin(userRole) {
     setRole(userRole);
-
-    if (userRole === "admin") navigate("dashboard");
-      else if (userRole === "student") navigate("studentDashboard");
+    if (userRole === "admin") {
+      navigate("dashboard");
+    } else if (userRole === "teacher") {
+      // ตัวอย่าง: ใช้ teacherId เป็น 'teacher' (ควรแก้ให้ดึง id จริงจากระบบจริง)
+      setTeacherId("teacher");
+      navigate("teacherDashboard");
+    } else if (userRole === "student") {
+      navigate("studentDashboard");
+    }
   }
 
   // ✔ นักเรียนเลือกเมนูหลัก
@@ -103,100 +111,64 @@ export default function App() {
     switch (page) {
       case "login":
         return <LoginPage onLogin={handleLogin} />;
-
-      case "studentDashboard":  
-        return (
-          <StudentDashboard
-            onClass={() => navigate("studentClassSelect")}
-            onRoom={() => navigate("studentRoomUsage")}
-            onLogout={handleLogout}
-            onBack={goBack}
-    />
-        );
-
-      case "studentClassSelect":
-        return (
-          <StudentClassSelect
-            onSelectClass={handleSelectClass}
-            type="class"
-          />
-        );
-
+      case "teacherDashboard":
+        return <TeacherDashboard teacherId={teacherId} onNavigate={navigate} />;
+      case "studentDashboard":
+        return <StudentDashboard onBack={goBack} onNavigate={navigate} />;
       case "studentTimetable":
         return <StudentTimetablePage className={selectedClass} />;
-
       case "studentRoomUsage":
-        return (
-          <StudentRoomUsage
-            onSelectRoom={handleSelectRoom}
-            type="selector"
-          />
-        );
-
+        return <StudentRoomUsage onSelectRoom={handleSelectRoom} type="selector" />;
       case "studentRoomUsageShow":
         return <StudentRoomUsage roomName={selectedRoom} />;
-
       case "dashboard":
         return <Dashboard />;
-
       case "teachers":
         return <Teachers />;
-
       case "subjects":
         return <Subjects />;
-
       case "rooms":
         return <Rooms />;
-
       case "classgroups":
         return <Classgroups />;
-
       case "groupsubjects":
         return <GroupSubjects />;
-
       case "settings":
         return <Settings />;
-
       case "generate":
         return <Generate />;
-
       case "teacherTimetable":
         return <TeacherTimetable />;
-
       case "timetable":
         return <Timetable />;
-
       case "roomUsage":
         return <RoomUsage />;
-
       case "validate":
         return <ValidateTimetable />;
-
       default:
         return <LoginPage onLogin={handleLogin} />;
     }
   };
 
   return (
-<div className="flex w-full h-screen overflow-hidden">
-  {role === "admin" && page !== "login" && (
-    <Sidebar onNavigate={navigate} active={page} onLogout={handleLogout} />
-  )}
+    <div className="flex w-full h-screen overflow-hidden">
+      {/* Admin Sidebar */}
+      {role === "admin" && page !== "login" && (
+        <Sidebar onNavigate={navigate} active={page} onLogout={handleLogout} />
+      )}
 
-  <main className="flex-1 overflow-auto bg-gray-100 p-6">
-    
-    {/* ✅ ปุ่มย้อนกลับ */}
-    {page !== "login" && (
-      <button
-        onClick={goBack}
-        className="mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded inline-flex items-center gap-2"
-      >
-        ← ย้อนกลับ
-      </button>
-    )}
+      {/* Student Sidebar */}
+      {role === "student" && page !== "login" && (
+        <StudentSidebar
+          onNavigate={navigate}
+          active={page}
+          onLogout={handleLogout}
+        />
+      )}
 
-    {renderPage()}
-  </main>
-</div>
+      <main className="flex-1 overflow-auto bg-gray-100 p-6">
+        {renderPage()}
+      </main>
+    </div>
   );
 }

@@ -352,6 +352,10 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      {/* Footer: Creator Credit (no border, no bg, always bottom) */}
+      <div style={{width:'100%',textAlign:'center',fontSize:'12px',color:'#aaa',position:'fixed',left:0,bottom:0,zIndex:50,background:'none',padding:'8px 0',pointerEvents:'none'}}>
+        สร้างและพัฒนาโดย NexaTime Team © 2025
+      </div>
     </div>
   );
 }

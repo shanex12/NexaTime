@@ -124,14 +124,52 @@ export default function TeacherTimetable() {
     pdf.save("teacher_timetable.pdf");
   }
 
+  // Export CSV
+  function exportCSV() {
+    if (!assignments.length) return;
+
+    const rows = assignments.map((a) => {
+      const subject = subjects.find((s) => s.id === a.course_id);
+      const teacher = teachers.find((t) => t.id === a.teacher_id);
+      const room = rooms.find((r) => r.id === a.room_id);
+      const groupName = a.class_group;
+      const info = getGroupInfo(groupName);
+
+      return {
+        ครู: teacher?.name || a.teacher_id,
+        วิชา: subject?.name || a.course_id,
+        กลุ่มเรียน: groupName,
+        แผนก: info.departmentName,
+        จำนวนนักเรียน: info.studentCount ?? "",
+        ห้อง: room?.name || "-",
+        วัน: dayNames[a.day],
+        คาบ: a.slot + 1,
+        ระยะคาบ: a.duration,
+        เวลา: getTimeRange(a.slot, a.duration)
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const csv = XLSX.utils.sheet_to_csv(ws);
+
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8;"
+    });
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "teacher_timetable.csv";
+    link.click();
+  }
+
   return (
     <div>
       <h2 className="text-2xl font-bold text-blue-700 mb-4">ตารางสอนรายครู</h2>
 
-      <div className="mb-4">
-        <label className="font-semibold">เลือกครู: </label>
+      <div className="mb-6">
+        <label className="font-semibold text-gray-700 block mb-2">เลือกครู: </label>
         <select
-          className="border p-2 rounded ml-2"
+          className="border-2 border-green-300 p-2 rounded-lg bg-white hover:border-green-500 transition-colors cursor-pointer"
           value={teacherSelected}
           onChange={(e) => setTeacherSelected(e.target.value)}
         >
@@ -143,10 +181,11 @@ export default function TeacherTimetable() {
         </select>
       </div>
 
-      <div className="mb-4 flex gap-2">
-        <button className="btn bg-green-600" onClick={exportExcel}>Excel</button>
-        <button className="btn bg-rose-600" onClick={exportPDF}>PDF</button>
-        <button className="btn bg-sky-500" onClick={exportPNG}>PNG</button>
+      <div className="mb-6 flex gap-3">
+        <button className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200" onClick={exportPDF}>📄 Export PDF</button>
+        <button className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200" onClick={exportPNG}>🖼️ Export PNG</button>
+        <button className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200" onClick={exportExcel}>📊 Export Excel</button>
+        <button className="px-6 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200" onClick={exportCSV}>📋 Export CSV</button>
       </div>
 
       <div ref={ref} className="p-4 bg-white shadow rounded overflow-auto">
@@ -155,7 +194,7 @@ export default function TeacherTimetable() {
             <tr>
               <th className="border p-2 bg-slate-100 w-36">วัน / คาบ</th>
               {Array.from({ length: slotsCount }).map((_, slot) => (
-                <th key={slot} className="border p-2 bg-blue-50">
+                <th key={slot} className="border p-2 bg-blue-50 h-20 w-32 min-w-max whitespace-normal">
                   คาบ {slot + 1}
                   <div className="text-xs text-slate-600">
                     {fmtTime(timeForSlotStart(slot))} - {fmtTime(timeForSlotStart(slot + 1))}
@@ -194,9 +233,6 @@ export default function TeacherTimetable() {
                             className="p-2 text-white rounded"
                             style={{ background: subject?.color || "#60a5fa" }}
                           >
-                            <div className="text-xs mb-1">
-                              {getTimeRange(s.slot, s.duration)}
-                            </div>
                             <div className="font-bold text-md">{subject?.name} ({course_id})</div>
                             <div className="text-sm">
                               กลุ่มเรียน: {groupName}

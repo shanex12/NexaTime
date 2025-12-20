@@ -228,21 +228,34 @@ export default function ClassGroups() {
             />
           </div>
 
-          <button className="btn bg-blue-600 w-full" onClick={handleSave}>
-            {editing ? "บันทึก" : "เพิ่มกลุ่มเรียน"}
-          </button>
+          {/* ปุ่ม */}
+          <div className="flex gap-2 mb-3">
+            <button className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 flex-1" onClick={handleSave}>
+              {editing ? "✅ บันทึก" : "➕ เพิ่มกลุ่มเรียน"}
+            </button>
 
-          <div className="mt-3">
-            <label className="btn bg-green-600 mb-2 cursor-pointer">
-              📂 นำเข้า student_groups.csv
-              <input
-                type="file"
-                hidden
-                accept=".csv"
-                onChange={handleImportCSV}
-              />
-            </label>
+            {editing && (
+              <button
+                className="px-6 py-2 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 flex-1"
+                onClick={() => {
+                  setForm(emptyForm);
+                  setEditing(false);
+                }}
+              >
+                ❌ ยกเลิก
+              </button>
+            )}
           </div>
+
+          <label className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer block text-center">
+            📂 นำเข้า student_groups.csv
+            <input
+              type="file"
+              hidden
+              accept=".csv"
+              onChange={handleImportCSV}
+            />
+          </label>
         </div>
 
         {/* list */}

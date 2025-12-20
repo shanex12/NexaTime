@@ -220,36 +220,33 @@ export default function GroupSubjects() {
             </select>
           </div>
 
-          {/* ปุ่มบันทึก / ยกเลิก */}
-          <div className="flex gap-2 mb-4">
+          {/* ปุ่ม */}
+          <div className="flex gap-2 mb-3">
             <button
-              className="btn bg-blue-600 flex-1"
+              className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 flex-1"
               onClick={handleSave}
             >
-              {editing ? "บันทึก" : "เพิ่ม"}
+              {editing ? "✅ บันทึก" : "➕ เพิ่ม"}
             </button>
             {editing && (
               <button
-                className="btn bg-gray-400 flex-1"
+                className="px-6 py-2 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 flex-1"
                 onClick={handleCancel}
               >
-                ยกเลิก
+                ❌ ยกเลิก
               </button>
             )}
           </div>
 
-          {/* นำเข้า CSV */}
-          <div className="border-t pt-3 mt-3">
-            <label className="btn bg-green-600 cursor-pointer">
-              📂 เลือกไฟล์ register.csv
-              <input
-                type="file"
-                hidden
-                accept=".csv"
-                onChange={handleImportCSV}
-              />
-            </label>
-          </div>
+          <label className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer block text-center">
+            📂 เลือกไฟล์ register.csv
+            <input
+              type="file"
+              hidden
+              accept=".csv"
+              onChange={handleImportCSV}
+            />
+          </label>
         </div>
 
         {/* ฝั่งขวา: รายการ mapping */}

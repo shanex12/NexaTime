@@ -3,15 +3,26 @@
 import React, { useState, useEffect } from "react";
 import { loadData, saveData, uid } from "../utils";
 import { parseCSV } from "../csv";
+import Papa from "papaparse";
 
 export default function Subjects() {
   const [subjects, setSubjects] = useState([]);
   const [allTeachers, setAllTeachers] = useState([]);
   const [departments, setDepartments] = useState([]);
 
+  // ✅ room_type ที่มีอยู่จริงทั้งหมด (จาก CSV + ที่แก้ใน UI)
+  const roomTypes = Array.from(
+    new Set(
+      subjects
+        .map((s) => String(s.room_type || "").trim())
+        .filter(Boolean)
+    )
+  );
+
   const emptyForm = {
     id: "",
     subject_id: "",
+    isHomeroom: true,
     name: "",
     periods: 0,
     theory: 0,
@@ -177,102 +188,85 @@ function handleImportCSV(e) {
   const reader = new FileReader();
 
   reader.onload = (ev) => {
-    const csvText = ev.target.result;
+    Papa.parse(ev.target.result, {
+      header: true,
+      skipEmptyLines: true,
+      complete: ({ data }) => {
+        // 🔹 data = rows จาก CSV จริง (รวม roomtype)
+        console.log("Import subject.csv rows (Papa):", data);
 
-    parseCSV(csvText, (rows) => {
-      console.log("Import subject.csv rows:", rows);
+        const subjectMap = new Map();
+        const importedIds = new Set();
 
-      // subject_id ที่มีอยู่แล้วในระบบ
-      // const existingIds = new Set(
-      //   subjects
-      //     .map(s => (s.subject_id || "").trim())
-      //     .filter(Boolean)
-      // );
+        // ใส่ subjects เดิมเข้า Map ก่อน (ให้ของใหม่ overwrite)
+        subjects.forEach((s) => {
+          if (s.subject_id) {
+            subjectMap.set(s.subject_id, s);
+          }
+        });
 
-      // ใช้ Map เพื่อให้ subject_id ซ้ำแล้วแทนที่อัตโนมัติ
-      const subjectMap = new Map();
-      
-      // เก็บ subject_id ที่นำเข้าแล้วในไฟล์
-      const importedIds = new Set();
+        data.forEach((r, index) => {
+          const rawId = String(r.subject_id || "").trim();
+          const name = String(r.subject_name || "").trim();
 
-      // ใส่ subjects เดิมเข้า Map ก่อน (ให้ของใหม่ overwrite)
-      subjects.forEach(s => {
-        if (s.subject_id) {
-          subjectMap.set(s.subject_id, s);
-        }
-      });
+          if (!name) {
+            console.warn(`Row ${index + 2}: ไม่มี subject_name → ข้าม`);
+            return;
+          }
 
-      rows.forEach((r, index) => {
-        const rawId = (r.subject_id || "").trim();
-        const name = (r.subject_name || "").trim();
+          if (rawId && importedIds.has(rawId)) {
+            console.warn(
+              `Row ${index + 2}: subject_id ซ้ำในไฟล์ → ข้าม`,
+              rawId
+            );
+            return;
+          }
 
-        if (!name) {
-          console.warn(`Row ${index + 2}: ไม่มี subject_name → ข้าม`);
-          return;
-        }
+          const subject_id = rawId || uid("s");
+          importedIds.add(subject_id);
 
-        // ❌ subject_id ซ้ำกันเองในไฟล์ 
-        if (rawId && importedIds.has(rawId)) { 
-          console.warn(`Row ${index + 2}: ไม่มี subject_name → ซ้ำในไฟล์, `, rawId);
-          return; 
-        }
+          const theory = Number(r.theory) || 0;
+          const practice = Number(r.practice) || 0;
+          const credit = Number(r.credit) || 0;
+          const periods = theory + practice || 1;
 
-        // ❌ subject_id ซ้ำกับของเดิมในระบบ
-        if (rawId && subjectMap.has(rawId)) {
-          console.warn(
-            `Row ${index + 2}: subject_id ซ้ำ → ใช้ข้อมูลใหม่แทนของเดิม`,
-            rawId
-          );
-        }
+          // 🔑 ตรงนี้คือหัวใจ: roomtype มาจาก CSV จริง
+          const csvRoomType = String(
+            r.room_type ?? r.roomtype ?? ""
+          ).trim();
 
-        const subject_id = rawId || uid("s");
-        importedIds.add(subject_id);
+          const old = subjectMap.get(subject_id);
 
-        const theory = Number(r.theory) || 0;
-        const practice = Number(r.practice) || 0;
-        const credit = Number(r.credit) || 0;
-        const periods = theory + practice || 1;
-        console.log("periods:", periods);
-        console.log("periods_per_session raw:", r.periods_per_session);
+          const subj = {
+            ...(old || {}),
+            id: subject_id,
+            subject_id,
+            name,
+            theory,
+            practice,
+            credit,
+            periods,
+            room_type: csvRoomType || old?.room_type || ""
+          };
 
-        const periods_per_session =
-          Number(r.periods_per_session || periods);  //เรียกจาก csv 
-        console.log("periods_per_session:", periods_per_session);
+          subjectMap.set(subject_id, subj);
+        });
 
-        const subj = {
-          id: subject_id,
-          subject_id,
-          isGeneral: false,
-          name,
-          theory,
-          practice,
-          room_tag: "",
-          room_type: "",
-          credit,
-          periods,
-          periods_per_session,
-          color: "#0ea5e9",
-          teachers: [],
-          departments: []
-        };
+        const merged = Array.from(subjectMap.values());
+        console.log("Merged subjects:", merged);
 
-        // ✅ set ซ้ำ = overwrite
-        subjectMap.set(subject_id, subj);
-      });
+        setSubjects(merged);
+        persist(merged);
 
-      // แปลงกลับเป็น array
-      const merged = Array.from(subjectMap.values());
-      console.log("Merged subjects:", merged);
-      setSubjects(merged);
-      persist(merged);
-
-      alert("นำเข้าวิชาเรียบร้อย (subject_id ไม่ซ้ำ)");
-      input.value = "";
+        alert("นำเข้าวิชาเรียบร้อย (subject_id ไม่ซ้ำ)");
+        input.value = "";
+      }
     });
   };
 
   reader.readAsText(file, "utf-8");
 }
+
 
 
   
@@ -294,6 +288,15 @@ function handleImportCSV(e) {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
 
+          <label className="text-sm">รหัสวิชา</label>
+          <input
+            className="w-full p-2 border mb-2"
+            placeholder="รหัสวิชา : เช่น 31900-0001"
+            value={form.subject_id}
+            onChange={(e) =>
+              setForm({ ...form, subject_id: (e.target.value) })
+            }
+          />
           <label className="text-sm">คาบทฤษฎี</label>
           <input
             type="number"
@@ -316,18 +319,31 @@ function handleImportCSV(e) {
             }
           />
 
-          {/* {ประเภทห้องเรียน}
+          {/* {ประเภทห้องเรียน} */}
           <label className="text-sm">ประเภทห้องเรียน</label>
+
           <select
             className="w-full p-2 border mb-2"
             value={form.room_type}
             onChange={(e) =>
               setForm({ ...form, room_type: e.target.value })
             }
-          ><option value="" selected disabled>-- เลือกประเภทห้อง --</option>
+          >
+            <option value="">-- ยังไม่กำหนด --</option>
+
+            {/* 🔹 room_type ที่มีอยู่จริงจาก CSV */}
+            {roomTypes.map((rt) => (
+              <option key={rt} value={rt}>
+                {rt}
+              </option>
+            ))}
+
+            {/* 🔹 ค่ามาตรฐาน */}
             <option value="classroom">ห้องเรียนปกติ</option>
             <option value="lab">ห้องปฏิบัติการ</option>
-          </select> */}
+          </select>
+          
+
 
           {/* {Room Tag} */}
           <label className="text-sm">ระบุ Tag ห้องเรียน</label>
@@ -397,7 +413,17 @@ function handleImportCSV(e) {
               )}
             </div>
           </div>
-
+          
+          <label>
+          <input
+            type="checkbox"
+            checked={form.isHomeroom}
+            onChange={(e) =>
+              setForm({ ...form, isHomeroom: e.target.checked })
+            }
+          />
+          กิจกรรมโฮมรูม / พบครูที่ปรึกษา
+        </label>
           {/* { แผนกที่เปิดสอน } */}
           <div className="mb-2">
             <div className="text-sm mb-1">แผนกที่เปิดสอน</div>
@@ -436,22 +462,22 @@ function handleImportCSV(e) {
 
           {/* ปุ่ม */}
           <div className="flex gap-2 mb-3">
-            <button className="btn bg-blue-600" onClick={handleAdd}>
-              {editing ? "บันทึก" : "เพิ่ม"}
+            <button className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 flex-1" onClick={handleAdd}>
+              {editing ? "✅ บันทึก" : "➕ เพิ่ม"}
             </button>
 
             <button
-              className="btn bg-gray-400"
+              className="px-6 py-2 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 flex-1"
               onClick={() => {
                 setForm(emptyForm);
                 setEditing(false);
               }}
             >
-              ยกเลิก
+              ❌ ยกเลิก
             </button>
           </div>
 
-          <label className="btn bg-green-600 mb-2 cursor-pointer">
+          <label className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 mb-2 cursor-pointer">
             📂 นำเข้า subject.csv
             <input type="file" hidden accept=".csv" onChange={handleImportCSV} />
           </label>
@@ -484,11 +510,16 @@ function handleImportCSV(e) {
                       หน่วยกิต: {s.credit}
                     </div>
                   )}
-                  {s.room_type !== undefined && (
+                  {String(s.room_type).trim() !== "" ? (
                     <div className="text-xs text-slate-500">
                       ประเภทห้องเรียน: {s.room_type}
                     </div>
+                  ) : (
+                    <div className="text-xs text-red-500">
+                      ⚠ ยังไม่ได้กำหนดประเภทห้อง
+                    </div>
                   )}
+
                   {s.room_tag !== undefined && (
                     <div className="text-xs text-slate-500">
                       Tag ห้องเรียน: {s.room_tag}
@@ -521,7 +552,7 @@ function handleImportCSV(e) {
           </div>
           <br/>
           <button
-  className="btn bg-red-700 w-full"
+  className="px-6 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 w-full"
   onClick={clearAllSubjects}
 >
   🗑️ ลบรายวิชาทั้งหมด

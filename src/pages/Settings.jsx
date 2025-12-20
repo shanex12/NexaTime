@@ -6,6 +6,7 @@ export default function Settings() {
   const [settings, setSettings] = useState({
     days: 5,
     timeslots_per_day: 8,
+    maxPeriodsPerDay: 10,   // ✅ ห้ามลงเกินคาบที่ 10 ต่อวัน
 
     // ✅ ตัวเลือกพฤติกรรม AI
     strictAvoidLunch : false, // บังคับเลี่ยงคาบพักกลางวัน ห้ามโดยเด็ดขาด 
@@ -14,7 +15,8 @@ export default function Settings() {
     spreadDays: true,       // กระจายวิชาข้ามวัน
     strictRoomTag: true,    // เข้มงวด room_tag
     balanceTeachers: true,  // กระจายภาระครู
-    isMatchRoomType: false   // บังคับให้จัดตารางแยกห้องเรียน
+    isMatchRoomType: false,  // บังคับให้จัดตารางแยกห้องเรียน
+    checkMaxPeriodsPerDay: false // ✅ เช็คห้ามลงเกินคาบที่ 10 ต่อวัน
   });
 
   useEffect(() => {
@@ -112,6 +114,25 @@ export default function Settings() {
             />
             <div className="text-xs text-gray-500 mt-1">
               ใส่เลขคาบที่ใช้เป็นพักกลางวัน เช่น 5 = พักคาบที่ 5
+            </div>
+          </div>
+
+          {/* จำนวนคาบสูงสุดต่อวัน */}
+          <div>
+            <label className="block mb-1 font-medium">
+              4) จำนวนคาบสูงสุดต่อวัน (สำหรับเช็คการจัดตาราง)
+            </label>
+            <input
+              type="number"
+              min={1}
+              className="w-full p-2 border rounded"
+              value={settings.maxPeriodsPerDay}
+              onChange={e =>
+                handleChange("maxPeriodsPerDay", Number(e.target.value) || 10)
+              }
+            />
+            <div className="text-xs text-gray-500 mt-1">
+              ระบุจำนวนคาบสูงสุดที่อนุญาตให้วางในแต่ละวัน (ค่าเริ่มต้น: 10)
             </div>
           </div>
 
@@ -220,11 +241,27 @@ export default function Settings() {
                 </div>
               </div>
             </label>
+
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={settings.checkMaxPeriodsPerDay}
+                onChange={e => handleChange("checkMaxPeriodsPerDay", e.target.checked)}
+              />
+              <div>
+                <div className="font-medium">ห้ามลงเกินคาบที่ {settings.maxPeriodsPerDay} ต่อวัน</div>
+                <div className="text-xs text-gray-500">
+                  AI จะตรวจสอบและไม่อนุญาตให้วางคาบเรียนในแต่ละวันเกินจำนวนที่กำหนด
+                  ป้องกันตารางที่แน่นเกินไป
+                </div>
+              </div>
+            </label>
           </div>
 
           <button
             onClick={handleSave}
-            className="btn bg-blue-600 w-full mt-3"
+            className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 w-full mt-3"
           >
             💾 บันทึกการตั้งค่า AI
           </button>

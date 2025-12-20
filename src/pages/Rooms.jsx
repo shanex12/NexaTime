@@ -3,10 +3,21 @@
 import React, { useState, useEffect } from "react";
 import { loadData, saveData, uid } from "../utils";
 import { parseCSV } from "../csv";
+import Papa from "papaparse";
 
 export default function Rooms() {
   const [rooms, setRooms] = useState([]);
   const [editing, setEditing] = useState(false);
+
+  // 🔑 room_type ที่มีอยู่จริงทั้งหมด (จาก CSV + ที่เคยบันทึก)
+  const roomTypes = Array.from(
+    new Set(
+      rooms
+        .map((r) => String(r.room_type || "").trim())
+        .filter(Boolean)
+    )
+  );
+
 
   const emptyForm = {
     id: "",
@@ -65,58 +76,63 @@ export default function Rooms() {
 
   // ✅ นำเข้า room.csv ตาม pdf: room_id, room_name
   function handleImportCSV(e) {
-  const input = e.target;
-  const file = input.files[0];
-  if (!file) return;
+    const input = e.target;
+    const file = input.files[0];
+    if (!file) return;
 
-  const reader = new FileReader();
+    const reader = new FileReader();
 
-  reader.onload = (ev) => {
-    const csvText = ev.target.result; // ✔ string
+    reader.onload = (ev) => {
+      Papa.parse(ev.target.result, {
+        header: true,
+        skipEmptyLines: true,
+        complete: ({ data }) => {
+          console.log("Import room.csv rows (Papa):", data);
 
-    parseCSV(csvText, (rows) => {
-      console.log("Import room.csv rows:", rows);
+          const imported = data
+            .map((r) => {
+              const name = String(r.room_name || "").trim();
+              if (!name) return null;
 
-      const imported = rows
-        .map((r) => {
-          const name = (r.room_name || "").trim();
-          if (!name) return null;
+              const room_id = String(r.room_id || uid("room")).trim();
 
-          const room_id = (r.room_id || uid("room")).trim();
+              const csvRoomType = String(
+                r.room_type ?? r.roomtype ?? ""
+              ).trim();
 
-          return {
-            id: room_id,
-            room_id,
-            name,
-            capacity: 0,
-            room_type: "",
-            room_tag: ""
-          };
-        })
-        .filter(Boolean);
+              return {
+                id: room_id,
+                room_id,
+                name,
+                capacity: 0,
+                room_type: csvRoomType, // 🔑 มาจาก CSV จริง
+                room_tag: ""
+              };
+            })
+            .filter(Boolean);
 
-      const merged = [...rooms];
+          const merged = [...rooms];
 
-      // รวมแบบไม่ซ้ำ room_id หรือ name
-      for (const r of imported) {
-        const exists = merged.find(
-          (x) =>
-            (x.room_id && x.room_id === r.room_id) ||
-            x.name.trim() === r.name.trim()
-        );
-        if (!exists) merged.push(r);
-      }
+          for (const r of imported) {
+            const exists = merged.find(
+              (x) =>
+                (x.room_id && x.room_id === r.room_id) ||
+                x.name.trim() === r.name.trim()
+            );
+            if (!exists) merged.push(r);
+          }
 
-      setRooms(merged);
-      persist(merged);
+          setRooms(merged);
+          persist(merged);
 
-      alert("นำเข้าห้องเรียนเรียบร้อย");
-      input.value = ""; // ✔ reset input
-    });
-  };
+          alert("นำเข้าห้องเรียนเรียบร้อย");
+          input.value = "";
+        }
+      });
+    };
 
-  reader.readAsText(file, "utf-8");
-}
+    reader.readAsText(file, "utf-8");
+  }
 
 
   return (
@@ -130,7 +146,7 @@ export default function Rooms() {
             {editing ? "แก้ไขห้องเรียน" : "เพิ่มห้องเรียนใหม่"}
           </h3>
 
-          {/* ชื่อห้อง / รหัสห้อง */}
+          {/* ชื่อห้อง */}
           <div className="mb-3">
             <label className="block mb-1 font-medium">ชื่อห้องเรียน</label>
             <input
@@ -141,6 +157,18 @@ export default function Rooms() {
                 setForm({
                   ...form,
                   name: e.target.value
+                })
+              }
+            />
+            <label className="block mb-1 font-medium">รหัสห้อง</label>
+            <input
+              className="w-full p-2 border rounded"
+              placeholder="เช่น R5301"
+              value={form.room_id}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  room_id: e.target.value
                 })
               }
             />
@@ -165,24 +193,13 @@ export default function Rooms() {
             />
           </div> */}
 
-          {/* {ประเภทห้อง} */}
-          <div className="mb-3">
-            <label className="block mb-1 font-medium">ประเภทห้องเรียน</label>
-            <select
-              className="w-full p-2 border rounded"
-              value={form.room_type}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  room_type: e.target.value
-                })
-              }
-            >
-              <option value="" defaultValue disabled>-- เลือกประเภทห้อง --</option>
-              <option value="theory">ห้องเรียนทั่วไป</option>
-              <option value="practice">ห้องเรียนปฏิบัติ</option>
-            </select>
-          </div>
+          <label className="text-sm">ประเภทห้อง (จาก CSV)</label>
+          <input
+            className="w-full p-2 border bg-gray-100 text-slate-600 mb-2"
+            value={form.room_type || ""}
+            readOnly
+          />
+
 
           {/* {Room Tag} */}
           <label className="text-sm">ระบุ Tag ห้องเรียน</label>
@@ -196,22 +213,22 @@ export default function Rooms() {
           /> 
 
           <div className="flex gap-2 mt-2">
-            <button className="btn bg-blue-600" onClick={handleSave}>
-              {editing ? "บันทึก" : "เพิ่มห้อง"}
+            <button className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 flex-1" onClick={handleSave}>
+              {editing ? "✅ บันทึก" : "➕ เพิ่มห้อง"}
             </button>
             <button
-              className="btn bg-gray-400"
+              className="px-6 py-2 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 flex-1"
               onClick={() => {
                 setForm(emptyForm);
                 setEditing(false);
               }}
             >
-              ยกเลิก
+              ❌ ยกเลิก
             </button>
           </div>
 
           <div className="mt-3">
-            <label className="btn bg-green-600 cursor-pointer">
+            <label className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer">
               📂 นำเข้า room.csv
               <input
                 type="file"
@@ -240,9 +257,13 @@ export default function Rooms() {
                       รหัสห้อง: {r.room_id}
                     </div>
                   )}
-                  {r.room_type !== undefined && (
+                  {r.room_type ? (
                     <div className="text-xs text-slate-500">
                       ประเภทห้องเรียน: {r.room_type}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-red-500">
+                      ⚠ ยังไม่ได้กำหนดประเภทห้อง
                     </div>
                   )}
                   {r.room_tag !== undefined && (

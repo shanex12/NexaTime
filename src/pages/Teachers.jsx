@@ -15,6 +15,7 @@ export default function Teachers() {
     name: "",
     short: "",
     max_per_day: 4,
+    subject_id: "",
     unavailable: []
   };
 
@@ -116,6 +117,7 @@ export default function Teachers() {
       name: safe.name,
       short: safe.short,
       max_per_day: safe.max_per_day,
+      subject_id: safe.subject_id || "",
       unavailable: safe.unavailable
     });
     setEditing(true);
@@ -327,7 +329,55 @@ function handleImportTeachCSV(e) {
               })
             }
           />
-
+          {/* รหัสครู*/}
+          <input
+            className="w-full p-2 border mb-2"
+            placeholder="รหัสครู"
+            value={form.teacher_id}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                teacher_id: e.target.value,  
+              })
+            }
+          />
+          {/* วิชาที่สอน */}
+          <div className="mb-3">
+            <label className="block mb-1 font-medium">วิชาที่สอน</label>
+            <select
+              className="w-full p-2 border rounded"
+              value={form.subject_id || ""}
+              onChange={(e) => {
+                const subjectId = e.target.value;
+                if (!subjectId) {
+                  // ลบวิชาออก
+                  setForm({
+                    ...form,
+                    subject_id: undefined
+                  });
+                } else {
+                  // ถ้าครูมี subject_id แล้ว ให้เพิ่มเข้า subjects[].teachers
+                  setForm({
+                    ...form,
+                    subject_id: subjectId
+                  });
+                }
+              }}
+            >
+              <option value="">-- เลือกวิชา --</option>
+              {subjects.map((s) => {
+                const value = s.subject_id || s.id;
+                const label = (s.subject_id && s.name && s.subject_id !== s.name) 
+                  ? `${s.subject_id} – ${s.name}` 
+                  : (s.name || s.subject_id || value);
+                return (
+                  <option key={s.id} value={value}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
           {/* ชื่อย่อครู (ยังให้แก้เองได้)
           <input
             className="w-full p-2 border mb-2"
@@ -408,52 +458,44 @@ function handleImportTeachCSV(e) {
             </table>
           </div>
 
-          {/* ปุ่มบันทึก / ยกเลิก */}
-          <div className="flex gap-2 mt-3">
-            <button className="btn bg-blue-600 flex-1" onClick={handleSave}>
-              {editing ? "บันทึก" : "เพิ่มครู"}
+          {/* ปุ่ม */}
+          <div className="flex gap-2 mb-3">
+            <button className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 flex-1" onClick={handleSave}>
+              {editing ? "✅ บันทึก" : "➕ เพิ่มครู"}
             </button>
+
             {editing && (
               <button
-                className="btn bg-gray-400 flex-1"
+                className="px-6 py-2 bg-gradient-to-r from-gray-400 to-gray-500 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 flex-1"
                 onClick={() => {
                   setForm(emptyForm);
                   setEditing(false);
                 }}
               >
-                ยกเลิก
+                ❌ ยกเลิก
               </button>
             )}
           </div>
 
-          {/* ปุ่มนำเข้า CSV */}
-          <div className="mt-4 space-y-2">
-            <div>
-              <label className="btn bg-green-600 cursor-pointer w-full text-center">
-                📂 นำเข้า teacher.csv (teacher_id,teacher_name)
-                <input
-                  type="file"
-                  hidden
-                  accept=".csv"
-                  onChange={handleFileTeacherCSV}
-                />
-              </label>
-            </div>
-            <div>
-              <label className="btn bg-emerald-600 cursor-pointer w-full text-center">
-                📂 นำเข้า teach.csv (teacher_id,subject_id)
-                <input
-                  type="file"
-                  hidden
-                  accept=".csv"
-                  onChange={handleImportTeachCSV}
-                />
-              </label>
-              <p className="text-xs text-slate-500 mt-1">
-                ใช้กำหนดว่าครูแต่ละคนสามารถสอนวิชาอะไรบ้าง
-              </p>
-            </div>
-          </div>
+          <label className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 mb-2 cursor-pointer block text-center">
+            📂 นำเข้า teacher.csv
+            <input
+              type="file"
+              hidden
+              accept=".csv"
+              onChange={handleFileTeacherCSV}
+            />
+          </label>
+
+          <label className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 cursor-pointer block text-center">
+            📂 นำเข้า teach.csv
+            <input
+              type="file"
+              hidden
+              accept=".csv"
+              onChange={handleImportTeachCSV}
+            />
+          </label>
         </div>
 
         {/* LIST */}

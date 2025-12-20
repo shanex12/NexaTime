@@ -66,8 +66,11 @@ export default function Generate() {
   const spreadDays = settings.spreadDays ?? true;
   const balanceTeachers = settings.balanceTeachers ?? true;
   const isMatchRoomType = settings.isMatchRoomType ?? false;
+  const checkMaxPeriodsPerDay = settings.checkMaxPeriodsPerDay ?? false;
+  const maxPeriodsPerDay = settings.maxPeriodsPerDay ?? 10;
 
 console.log("DEBUG: isMatchRoomType =", isMatchRoomType);
+console.log("DEBUG: checkMaxPeriodsPerDay =", checkMaxPeriodsPerDay, "maxPeriodsPerDay =", maxPeriodsPerDay);
 
 
   console.log("DEBUG: settings", {
@@ -102,7 +105,16 @@ console.log("DEBUG: isMatchRoomType =", isMatchRoomType);
    * กรองรายวิชาที่ "กลุ่มเรียนนี้ลงทะเบียน"
    * ใช้ mapping groupSubjects (group_id <-> subject_id)
    */
+  // ===============================
+// 🧭 Display Helpers (GLOBAL SCOPE)
+// ===============================
+const DAY_NAMES = ["จ.", "อ.", "พ.", "พฤ.", "ศ."];
+
+function slotRange(start, duration) {
+  return `คาบ ${start + 1}–${start + duration}`;
+}
   function filterSubjectsForGroup(groupName) {
+    
     console.log("DEBUG: filterSubjectsForGroup()", groupName);
 
     if (!groupName) return subjects;
@@ -123,11 +135,13 @@ console.log("DEBUG: isMatchRoomType =", isMatchRoomType);
     }
 
     const result = subjects.filter(s =>
+      s.isHomeroom || // ✅ เพิ่มบรรทัดนี้
       reg.some(r =>
         r.group_id === classGroup.group_id &&
         r.subject_id === s.subject_id
       )
     );
+
 
     console.log("DEBUG: filtered subjects", result);
     return result;
@@ -146,7 +160,7 @@ console.log("DEBUG: isMatchRoomType =", isMatchRoomType);
 
     return sessions
       .map(s => {
-        const duration = s.periods_per_session || 1;
+        const duration = s.duration || s.periods_per_session || 1;
         const teacherCount = s.teachers?.length ?? teachers.length;
         const roomCount = matchRooms(s).length || 999;
 
@@ -244,33 +258,72 @@ console.log("DEBUG: isMatchRoomType =", isMatchRoomType);
       .reduce((sum, a) => sum + (a.duration || 1), 0);
   }
 
+    // ===============================
+  // 🔍 ตรวจว่าวันนี้ยังมีช่องว่าง "ติดกัน" พอสำหรับคาบยาวหรือไม่
+  // ===============================
+  function hasContinuousSpace(
+    groupName,
+    day,
+    duration,
+    assignments,
+    globalAssignments
+  ) {
+    const used = new Array(slots).fill(false);
+
+    [...assignments, ...globalAssignments]
+      .filter(a => a.class_group === groupName && a.day === day)
+      .forEach(a => {
+        for (let i = a.slot; i < a.slot + a.duration; i++) {
+          if (i >= 0 && i < slots) used[i] = true;
+        }
+      });
+
+    let run = 0;
+    for (let i = 0; i < slots; i++) {
+      if (!used[i]) {
+        run++;
+        if (run >= duration) return true; // ✅ มีช่องว่างติดกันพอ
+      } else {
+        run = 0;
+      }
+    }
+
+    return false;
+  }
+
 
   /* ======================================================
    *  ROOM MATCHING
    * ====================================================== */
 
   function matchRooms(subj) {
-  console.log("DEBUG: matchRooms()", subj.name);
+    console.log("DEBUG: matchRooms()", subj.name);
 
-  // 🧠 MODE ใหม่: match room_type
-  if (isMatchRoomType && subj.room_type) {
-    const matched = rooms.filter(
-      r => r.room_type === subj.room_type
+    // ❌ ตัดห้อง error / ห้องขยะ ออกก่อน
+    const cleanRooms = rooms.filter(r =>
+      r &&
+      r.id &&
+      r.name &&
+      !r.name.includes("?") &&
+      r.name.trim() !== "" &&
+      r.id !== "ORG-ACTIVITY" &&
+      r.room_type !== "Practice" // ← ถ้า Practice แบบนี้คือ error
     );
 
-    if (matched.length > 0) {
-      console.log(
-        "DEBUG: matched rooms by room_type",
-        subj.room_type,
-        matched
+    // 🧠 MODE match room_type
+    if (isMatchRoomType && subj.room_type) {
+      const matched = cleanRooms.filter(
+        r => r.room_type === subj.room_type
       );
-      return matched;
-    }
-  }
 
-  // 🧱 fallback (ระบบเดิม)
-  return rooms;
-}
+      if (matched.length > 0) {
+        return matched;
+      }
+    }
+
+    // 🧱 fallback
+    return cleanRooms;
+  }
 
 
   function generateDurationCandidates(totalPeriods) {
@@ -388,9 +441,52 @@ console.log("DEBUG: isMatchRoomType =", isMatchRoomType);
  *    2) match room type (theory / practice)
  * ======================================================
  */
+function autoSplitPracticeSession(subj) {
+  // แตกเฉพาะ practice ที่ยาว
+  if (
+    subj.sessionType !== "practice" ||
+    subj.duration <= 2
+  ) {
+    return [subj];
+  }
+
+  const half = Math.floor(subj.duration / 2);
+
+  const s1 = {
+    ...subj,
+    duration: half,
+    __splitFrom: subj.duration
+  };
+
+  const s2 = {
+    ...subj,
+    duration: subj.duration - half,
+    __splitFrom: subj.duration
+  };
+
+  console.warn(
+    `AUTO SPLIT: ${subj.name} practice ${subj.duration} → ${s1.duration}+${s2.duration}`
+  );
+
+  return [s1, s2];
+}
+
+
 function buildSessionsFromSubject(subj) {
   const sessions = [];
 
+  // ✅ HOMEROOM
+  if (subj.isHomeroom) {
+    sessions.push({
+      ...subj,
+      periods: 1,                 // ✅ สำคัญมาก
+      periods_per_session: 1,     // ✅ สำคัญ
+      duration: 1,
+      sessionType: "homeroom",
+      room_type: null
+    });
+    return sessions;
+  }
   // ===============================
   // 🧠 MODE ใหม่: แยก theory / practice
   // ===============================
@@ -415,26 +511,18 @@ function buildSessionsFromSubject(subj) {
 );
 
     }
+  // --- PRACTICE ---
+  if (Number(subj.practice) > 0) {
+    const practiceSession = {
+      ...subj,
+      duration: Number(subj.practice),
+      sessionType: "practice",
+      room_type: "practice"
+    };
 
-    // --- PRACTICE ---
-    if (Number(subj.practice) > 0) {
-      sessions.push({
-        ...subj,
-        duration: Number(subj.practice),
-        sessionType: "practice",
-        room_type: "practice"
-      });
-      console.log(
-  "DEBUG: buildSession",
-  {
-    subject: subj.name,
-    sessionType: sessions[sessions.length - 1]?.sessionType,
-    duration: sessions[sessions.length - 1]?.duration,
-    room_type: sessions[sessions.length - 1]?.room_type
+    const splitted = autoSplitPracticeSession(practiceSession);
+    sessions.push(...splitted);
   }
-);
-
-    }
 
     return sessions;
   }
@@ -464,9 +552,24 @@ function buildSessionsFromSubject(subj) {
   const sessions = [];
 
   subs.forEach(subj => {
+
+    // ❌ ไม่เอากิจกรรมองค์การเข้า heuristic
+    if (
+      subj.code === ORG_ACTIVITY_CODE ||
+      subj.subject_code === ORG_ACTIVITY_CODE ||
+      subj.name?.includes("กิจกรรมองค์การวิชาชีพ")
+    ) {
+      sessions.push({
+        ...subj,
+        __fixed: "ORG_ACTIVITY"
+      });
+      return;
+    }
+
     const builtSessions = buildSessionsFromSubject(subj);
     sessions.push(...builtSessions);
   });
+
 
   console.log("DEBUG: subjectSessions", groupName, sessions);
   return sortSessionsWithHeuristic(sessions);
@@ -486,6 +589,8 @@ function buildSessionsFromSubject(subj) {
     localAssignments = [],
     globalAssignments = []
   ) {
+    if (!teacherId) return false; // ⭐ HoomRoom ไม่ต้องเช็คครู
+
     const all = [...localAssignments, ...globalAssignments];
 
     return all.some(a => {
@@ -494,14 +599,13 @@ function buildSessionsFromSubject(subj) {
 
       const aStart = a.slot;
       const aEnd = a.slot + a.duration;
-
       const bStart = startSlot;
       const bEnd = startSlot + duration;
 
-      // overlap check
       return !(bEnd <= aStart || bStart >= aEnd);
     });
   }
+
 
   function isRoomBusy(
     roomId,
@@ -548,225 +652,232 @@ function buildSessionsFromSubject(subj) {
     });
   }
 
-  function generateScheduleForOneGroup(ctx, sessions, globalAssignments) {
-    console.log("========== START generateScheduleForOneGroup ==========");
-    console.log("CTX:", ctx);
-    console.log("Total sessions:", sessions.length);
+      // 🔒 LOCK กิจกรรมองค์การวิชาชีพ
+      const ORG_ACTIVITY_CODE = "30000-2004";
+      const ORG_ACTIVITY_DAY = 2;        // พุธ
+      const ORG_ACTIVITY_START = 7;      // 15:00
+      const ORG_ACTIVITY_DURATION = 2;   // 15:00–17:00    
 
-    setLog(prev =>
-      prev +
-      `\n\n▶ เริ่มสร้างตารางกลุ่ม ${ctx.groupName} (${sessions.length} sessions)`
-    );
+      const SESSION_RETRY_LIMIT = 50; // 🔥 วน session ซ้ำสูงสุด - เพิ่มให้วิชา duration ยาว ลงได้
 
-    const assignments = [];
+      // ===============================
+      // AI Retry Config
+      // ===============================
+      const SUBJECT_RETRY_LIMIT = 3;   // ให้ AI คิดใหม่กี่รอบต่อ 1 วิชา
+      const ATTEMPT_PER_ROUND = 400;   // จำนวน attempt ต่อรอบ (ต่อวิชา)
 
-    for (const subj of sessions) {
-      console.log("---- Subject ----", subj.name);
+      
+        
+function generateScheduleForOneGroup(ctx, sessions, globalAssignments) {
+  setLog(p => p + `\n\n▶ เริ่มสร้างตารางกลุ่ม ${ctx.groupName}`);
+  const assignments = [];
 
-      // 🔴 ของเดิม
-      const totalPeriods = subj.periods_per_session || 1;
-      const durationCandidates = generateDurationCandidates(totalPeriods);
+  /* ===============================
+   * STEP 1: ล็อคกิจกรรมองค์การ
+   * =============================== */
+  sessions
+    .filter(s => s.__fixed === "ORG_ACTIVITY")
+    .forEach(subj => {
+      const a = {
+        course_id: subj.id,
+        course_code: subj.code || subj.subject_code,
+        course_name: subj.name,
+        teacher_id: null,
+        teacher_name: "กิจกรรม",
+        room_id: "ORG-ACTIVITY",
+        room_name: "กิจกรรมองค์การ",
+        class_group: ctx.groupName,
+        day: ORG_ACTIVITY_DAY,
+        slot: ORG_ACTIVITY_START,
+        duration: ORG_ACTIVITY_DURATION,
+        color: "#9333ea",
+        sessionType: "activity"
+      };
+      assignments.push(a);
+      globalAssignments.push(a);
+    });
 
-      // 🔴 คาบรวมจริงของวิชา
-      const originalPeriods = subj.periods || totalPeriods;
-      let remainingPeriods = originalPeriods;
+  /* ===============================
+   * STEP 2: วาง session ทีละอัน
+   * =============================== */
+  for (const subj of sessions) {
+  if (subj.__fixed) continue;
 
-      let placedAnything = false;
+  const duration = subj.duration || 1;
+  let placed = false;
+  let sessionRetry = 0;
 
-      // 🆕 buffer สำหรับ rollback "เฉพาะวิชานี้"
-      const tempAssignments = []; // 🔧 FIX
+  while (!placed && sessionRetry < SESSION_RETRY_LIMIT) {
+    sessionRetry++;
 
-      // ❗ ของเดิม
-      if (totalPeriods > slots) {
-        const msg =
-          `❌ ${subj.name}: ใช้ ${totalPeriods} คาบ > คาบต่อวัน (${slots})`;
-        console.warn(msg);
-        setLog(prev => prev + "\n" + msg);
-        continue;
-      }
-
-      // 🔁 แตก session จนคาบครบ
-      while (remainingPeriods > 0) {
-        let placed = false;
-
-        for (const duration of durationCandidates) {
-          if (placed) break;
-          if (duration > remainingPeriods) continue;
-
-          const isSplit = duration < totalPeriods;
-
-          if (isSplit) {
-            setLog(prev =>
-              prev +
-              `\n↪ ทดลองแบ่งคาบ ${subj.name} เหลือ ${duration} คาบ/ครั้ง | จากเดิม ${totalPeriods} คาบ`
-            );
-          }
-
-          for (let pass = 0; pass < 2 && !placed; pass++) {
-            const allowLunch = pass === 1 || !avoidLunch;
-
-            for (let attempt = 0; attempt < 500 && !placed; attempt++) {
-
-              const day = pickDayForGroup(
-                ctx.groupName,
-                assignments,
-                globalAssignments
-              );
-
-              // 🔧 FIX: รวม assignment ที่ commit แล้ว + ของวิชานี้
-              const localAssignments = [...assignments, ...tempAssignments];
-
-              const usedSlots = getUsedSlotsForDay(
-                ctx.groupName,
-                day,
-                localAssignments,
-                globalAssignments
-              );
-
-              if (usedSlots + duration > slots) continue;
-
-              const startSlot = Math.floor(
-                Math.random() * (slots - duration + 1)
-              );
-
-              const hitsLunch =
-                startSlot <= lunchSlot &&
-                startSlot + duration > lunchSlot;
-
-              if (strictAvoidLunch && hitsLunch) continue;
-              if (!allowLunch && avoidLunch && hitsLunch) continue;
-
-              const selectedTeachers = subj.teachers?.length
-                ? teachers.filter(t => subj.teachers.includes(t.id))
-                : teachers;
-
-              const teacher = chooseTeacher(
-                selectedTeachers,
-                localAssignments,
-                globalAssignments
-              );
-              if (!teacher) continue;
-
-              if (isTeacherUnavailable(teacher, day, startSlot, duration)) continue;
-
-              const possibleRooms = matchRooms(subj);
-              if (!possibleRooms.length) continue;
-
-              const room = possibleRooms[Math.floor(Math.random() * possibleRooms.length)];
-
-              // 🧠 LOG: ตรวจสอบ room_type match
-if (isMatchRoomType && subj.room_type) {
-  const isMatch = room.room_type === subj.room_type;
-
-  console.log(
-    "ROOM TYPE CHECK",
-    {
-      subject: subj.name,
-      sessionType: subj.sessionType,
-      expectedRoomType: subj.room_type,
-      actualRoomType: room.room_type,
-      matched: isMatch
-    }
-  );
-
-  setLog(prev =>
-    prev +
-    `\n🧪 ${subj.name} [${subj.sessionType}] → ห้อง ${room.name}` +
-    ` (${room.room_type || "ไม่ระบุ"}) ` +
-    (isMatch ? "✅ ตรง room type" : "❌ ไม่ตรง room type")
+if (sessionRetry === 1 || sessionRetry === SESSION_RETRY_LIMIT) {
+  setLog(p =>
+    p +
+    `\n   🔁 ${subj.sessionType} (${duration} คาบ) : พยายามรอบที่ ${sessionRetry}`
   );
 }
 
-              // 🔧 FIX: ตรวจชนกับ localAssignments แทน assignments
-              if (
-                isTeacherBusy(
-                  teacher.id,
-                  day,
-                  startSlot,
-                  duration,
-                  localAssignments,
-                  globalAssignments
-                ) ||
-                isRoomBusy(
-                  room.id,
-                  day,
-                  startSlot,
-                  duration,
-                  localAssignments,
-                  globalAssignments
-                ) ||
-                isClassBusy(
-                  ctx.groupName,
-                  day,
-                  startSlot,
-                  duration,
-                  localAssignments
-                )
-              ) {
-                continue;
-              }
+    /* ---------- SYSTEMATIC: วันละคาบ ไม่สุ่ม ---------- */
+    // 🔀 ถ้า spreadDays เปิด ให้เรียงวันตามจำนวนคาบน้อย → มาก
+    const dayOrder = spreadDays
+      ? [...Array(days).keys()].sort((a, b) => {
+          const loadA = getUsedSlotsForDay(ctx.groupName, a, assignments, globalAssignments);
+          const loadB = getUsedSlotsForDay(ctx.groupName, b, assignments, globalAssignments);
+          return loadA - loadB;
+        })
+      : [...Array(days).keys()]; // ถ้าปิด ให้ลำดับปกติ 0, 1, 2, ...
 
-              const colorByType = subj.sessionType === "mixed" ? subj.color : subj.sessionType === "theory" ? "blue" : "green";
-              const newAssignment = {
-                course_id: subj.id,
-                course_name: subj.name,
-                teacher_id: teacher.id,
-                teacher_name: teacher.name,
-                room_id: room.id,
-                room_name: room.name,
-                class_group: ctx.groupName,
-                day,
-                slot: startSlot,
-                duration,
-                originalDuration: originalPeriods,
-                color: colorByType,
-                sessionType: subj.sessionType
-              };
+    for (const day of dayOrder) {
+      if (placed) break; // ถ้าลงสำเร็จแล้ว ออกจากลูปวัน
 
-              // ❗ ยังไม่ commit
-              tempAssignments.push(newAssignment);
+      // 🔧 Relax continuous space check สำหรับ retry หลังจากครั้งแรก
+      if (
+        duration > 1 &&
+        sessionRetry <= 3 && // ลูปแรก ให้เข้มงวด
+        !hasContinuousSpace(
+          ctx.groupName,
+          day,
+          duration,
+          assignments,
+          globalAssignments
+        )
+      ) continue;
 
-              placed = true;
-              placedAnything = true;
-              remainingPeriods -= duration;
-            }
+      // 🔀 สร้างลำดับช่องคาบ: ลูปแรก sequential, retry ให้พยายามแบบสุ่ม
+      let slotArray = [];
+      if (sessionRetry <= 3) {
+        // ลูปแรก (1-3) ให้ลำดับปกติ
+        slotArray = Array.from({ length: slots - duration + 1 }, (_, i) => i);
+      } else {
+        // Retry (4+) ให้สุ่มช่องลองใจ
+        slotArray = Array.from({ length: slots - duration + 1 }, (_, i) => i)
+          .sort(() => Math.random() - 0.5);
+      }
 
+      for (const startSlot of slotArray) {
+
+        // ✅ ตรวจสอบจำนวนคาบต่อวัน (อนุญาตคาบเช้า แม้รวมทั้งวันเกิน)
+        if (checkMaxPeriodsPerDay) {
+          const usedSlots = getUsedSlotsForDay(
+            ctx.groupName,
+            day,
+            assignments,
+            globalAssignments
+          );
+          // คาบเช้า (< 4) อนุญาตให้ลง แม้รวมจะเกิน
+          // คาบบ่าย (>= 4) เช็คให้เข้มงวด
+          const isMorning = startSlot < 4;
+          if (!isMorning && usedSlots + duration > maxPeriodsPerDay) {
+            continue; // ข้ามไปคาบถัดไป
           }
         }
 
-        if (!placed) break;
-      }
+        // 🚫 ORG
+        if (
+          day === ORG_ACTIVITY_DAY &&
+          startSlot < ORG_ACTIVITY_START + ORG_ACTIVITY_DURATION &&
+          startSlot + duration > ORG_ACTIVITY_START
+        ) continue;
 
-      // 🔴 All-or-Nothing decision
-      if (remainingPeriods > 0) {
-        // ❌ rollback ทั้งวิชา
-        setLog(prev =>
-          prev +
-          `\n⛔ ยกเลิกวิชา ${subj.name} ทั้งหมด ` +
-          `(ลงได้ ${originalPeriods - remainingPeriods}/${originalPeriods} คาบ → rollback)`
-        );
-        // ไม่ push tempAssignments ใด ๆ
-      } else {
-        // ✅ commit ทั้งวิชา
-        tempAssignments.forEach(a => {
-          assignments.push(a);
-          globalAssignments.push(a);
-        });
+        // 🚫 lunch
+        const hitsLunch =
+          startSlot <= lunchSlot &&
+          startSlot + duration > lunchSlot;
+        if (strictAvoidLunch && hitsLunch) continue;
 
-        setLog(prev =>
-          prev +
-          `\n✔ วิชา ${subj.name} ลงครบ ${originalPeriods} คาบ ✅`
-        );
+
+        // �👨‍🏫 ครู
+        let teacher = null;
+        if (!subj.isHomeroom) {
+          const candidates = subj.teachers?.length
+            ? teachers.filter(t => subj.teachers.includes(t.id))
+            : teachers;
+
+          teacher = chooseTeacher(
+            candidates,
+            assignments,
+            globalAssignments
+          );
+          if (!teacher) continue;
+
+          if (
+            isTeacherBusy(
+              teacher.id,
+              day,
+              startSlot,
+              duration,
+              assignments,
+              globalAssignments
+            )
+          ) continue;
+        }
+
+        // 🏫 ห้อง
+        const roomsToTry = matchRooms(subj);
+        for (const room of roomsToTry) {
+
+          if (
+            isRoomBusy(
+              room.id,
+              day,
+              startSlot,
+              duration,
+              assignments,
+              globalAssignments
+            ) ||
+            isClassBusy(
+              ctx.groupName,
+              day,
+              startSlot,
+              duration,
+              assignments
+            )
+          ) continue;
+
+          // ✅ วางได้จริง
+          assignments.push({
+            course_id: subj.id,
+            course_name: subj.name,
+            teacher_id: teacher?.id || null,
+            teacher_name: teacher?.name || null,
+            room_id: room.id,
+            room_name: room.name,
+            class_group: ctx.groupName,
+            day,
+            slot: startSlot,
+            duration,
+            color: subj.color,
+            sessionType: subj.sessionType
+          });
+
+          globalAssignments.push(assignments.at(-1));
+          placed = true;
+          break;
+        }
+        if (placed) break;
       }
     }
-
-    console.log("========== END generateScheduleForOneGroup ==========");
-    return assignments;
   }
 
+  if (!placed) {
+setLog(p =>
+  p +
+  `\n⛔ วิชา: ${subj.name}\n   ❌ ${subj.sessionType} (${duration} คาบ) ไม่สามารถลงได้หลัง retry ${SESSION_RETRY_LIMIT} รอบ`
+);
+  } else {
+const last = assignments.at(-1);
+
+setLog(p =>
+  p +
+  `\n   ✔ ${subj.sessionType} (${duration} คาบ) ลงสำเร็จ ` +
+  `(${DAY_NAMES[last.day]} ${slotRange(last.slot, last.duration)} ห้อง ${last.room_name})`
+);
+  }
+}
 
 
-
+  return assignments;
+}
 
   /* ======================================================
    *  CLEAR / GENERATE
@@ -860,26 +971,26 @@ if (isMatchRoomType && subj.room_type) {
         </select>
 
         <button
-          className="btn bg-blue-600 w-full"
+          className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 w-full disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={running}
           onClick={generateOneClassGroup}
         >
-          สร้างตาราง (เฉพาะกลุ่ม)
+          🎯 สร้างตาราง (เฉพาะกลุ่ม)
         </button>
 
         <button
-          className="btn bg-emerald-600 w-full"
+          className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 w-full disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={running}
           onClick={generateAllClassGroup}
         >
-          สร้างตารางทั้งหมด
+          🚀 สร้างตารางทั้งหมด
         </button>
 
         <button
-          className="btn bg-red-600 w-full"
+          className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 w-full"
           onClick={clearAllTables}
         >
-          เคลียร์ตารางทั้งหมด
+          🗑️ เคลียร์ตารางทั้งหมด
         </button>
 
         <pre className="bg-gray-100 p-2 rounded h-40 overflow-auto text-sm whitespace-pre-wrap">

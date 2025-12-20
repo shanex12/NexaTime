@@ -122,14 +122,52 @@ export default function RoomUsage() {
     pdf.save("room_usage.pdf");
   }
 
+  // Export CSV
+  function exportCSV() {
+    if (!assignments.length) return;
+
+    const rows = assignments.map((a) => {
+      const subject = data.subjects?.find((s) => s.id === a.course_id);
+      const teacher = data.teachers?.find((t) => t.id === a.teacher_id);
+      const room = rooms.find((r) => r.id === a.room_id);
+      const groupName = a.class_group;
+      const info = getGroupInfo(groupName);
+
+      return {
+        ห้อง: room?.name || "-",
+        วิชา: subject?.name || a.course_id,
+        กลุ่มเรียน: groupName,
+        แผนก: info.departmentName,
+        จำนวนนักเรียน: info.studentCount ?? "",
+        วัน: dayNames[a.day],
+        คาบ: a.slot + 1,
+        ระยะคาบ: a.duration,
+        เวลา: getTimeRange(a.slot, a.duration),
+        ครู: teacher?.name || a.teacher_id
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const csv = XLSX.utils.sheet_to_csv(ws);
+
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8;"
+    });
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "room_usage.csv";
+    link.click();
+  }
+
   return (
     <div>
       <h2 className="text-2xl font-bold text-blue-700 mb-4">ตารางการใช้งานห้องเรียน</h2>
 
-      <div className="mb-4">
-        <label className="font-semibold">เลือกห้องเรียน: </label>
+      <div className="mb-6">
+        <label className="font-semibold text-gray-700 block mb-2">เลือกห้องเรียน: </label>
         <select
-          className="border p-2 rounded ml-2"
+          className="border-2 border-orange-300 p-2 rounded-lg bg-white hover:border-orange-500 transition-colors cursor-pointer"
           value={roomSelected}
           onChange={(e) => setRoomSelected(e.target.value)}
         >
@@ -141,10 +179,11 @@ export default function RoomUsage() {
         </select>
       </div>
 
-      <div className="mb-4 flex gap-2">
-        <button className="btn bg-green-600" onClick={exportExcel}>Excel</button>
-        <button className="btn bg-rose-600" onClick={exportPDF}>PDF</button>
-        <button className="btn bg-sky-500" onClick={exportPNG}>PNG</button>
+      <div className="mb-6 flex gap-3">
+        <button className="px-6 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200" onClick={exportPDF}>📄 Export PDF</button>
+        <button className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200" onClick={exportPNG}>🖼️ Export PNG</button>
+        <button className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200" onClick={exportExcel}>📊 Export Excel</button>
+        <button className="px-6 py-2 bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-lg font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200" onClick={exportCSV}>📋 Export CSV</button>
       </div>
 
       <div ref={ref} className="p-4 bg-white shadow rounded overflow-auto">
